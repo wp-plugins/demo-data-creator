@@ -10,9 +10,9 @@ Demo Data Creator is a Wordpress MU plugin that allows a Wordpress developer to 
 
 == Description ==
 
-If you're a web geek like me and into developing Wordpress MU websites (like wibsite.com), it’s useful to have a bit of demo data in your system while it’s being built. This allows you to check that lists of things are displaying as they should, and that themes are working when they get data in them.
+If you're a web geek like me and into developing Wordpress MU websites (like wibsite.com), it's useful to have a bit of demo data in your system while it’s being built. This allows you to check that lists of things are displaying as they should, and that themes are working when they get data in them.
 
-Historically it’s been a pain to add that data in. Either you need to take a backup of another site and use that data, or you need to tediously create multiple users and blogs yourself. No more, not now my Demo Data Creator is in town!
+Historically it's been a pain to add that data in. Either you need to take a backup of another site and use that data, or you need to tediously create multiple users and blogs yourself. No more, not now my Demo Data Creator is in town!
 
 This Wordpress MU plugin gives you a new admin screen where you can enter some parameters, click a button and (after a short wait) random demo data will be created. The parameter options include:
 
