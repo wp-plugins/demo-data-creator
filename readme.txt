@@ -24,7 +24,7 @@ This Wordpress MU plugin gives you a new admin screen where you can enter some p
     * Maximum number of comments per post
     * Maximum number of links in blogroll
 
-Post content and comment text is automatically generated from Lorem ipsum text, for post content it’s even HTML-formatted. You can also set a template for what you want the blog URLs to be, for example demoblog-1.mysite.com.
+Post content and comment text is automatically generated from Lorem ipsum text, for post content it's even HTML-formatted. You can also set a template for what you want the blog URLs to be, for example demoblog-1.mysite.com.
 
 == Installation ==
 
