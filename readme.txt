@@ -39,3 +39,7 @@ To scratch my own itch when developing [BeatsBase.com](http://beatsbase.com "Fre
 = Are you planning to support BuddyPress =
 
 Yes, but I'm not sure when I'll have time to develop that section of the plugin.
+
+== Screenshots ==
+
+1. The demo data admin page
