@@ -1,15 +1,94 @@
 <?php
 /*
 Plugin Name: Wordpress MU Demo Data Creator
-Plugin URI: http://www.stillbreathing.co.uk/projects/mu-demodata/
-Description: A plugin for Wordpress MU which will allow a site administrator to create multiple fake users and blogs to test their WPMU installation. This is very useful when developing plugins and themes that you need to work with many users and blogs.
-Version: 0.1
+Plugin URI: http://www.stillbreathing.co.uk/projects/demodata/
+Description: A plugin for Wordpress MU and BuddyPress which will allow a site administrator to create multiple fake users and blogs to test their installation. This is very useful when developing plugins and themes that you need to work with many users and blogs.
+Version: 0.2
 Author: Chris Taylor
 Author URI: http://www.stillbreathing.co.uk
 */
 
+// if the file is being called outside of Wordpress
+if (!function_exists('add_action'))
+{
+	// include Wordpress
+	require($_SERVER['DOCUMENT_ROOT'] . '/wp-blog-header.php');
+
+	// listen for form submission
+	demodata_watch_form();
+}
+
 // when the admin menu is built
 add_action('admin_menu', 'demodata_add_menu_items');
+
+// ======================================================
+// Admin functions
+// ======================================================
+
+// create the data
+function demodata_create()
+{
+	// listen for a form submission
+	if (count($_POST) > 0 && isset($_POST["create"]))
+	{
+	
+		switch ($_POST["create"]) {
+		
+			// creating users
+			case "users":
+				demodata_create_users();
+				break;
+		
+			// creating blogs
+			case "blogs":
+				demodata_create_blogs();
+				break;
+		
+			// creating categories
+			case "categories":
+				demodata_create_categories();
+				break;
+		
+			// creating posts
+			case "posts":
+				demodata_create_posts();
+				break;
+				
+			// creating pages
+			case "pages":
+				demodata_create_pages();
+				break;
+				
+			// creating comments
+			case "comments":
+				demodata_create_comments();
+				break;
+				
+			// creating links
+			case "links":
+				demodata_create_links();
+				break;
+				
+			// creating groups
+			case "groups":
+				demodata_create_groups();
+				break;
+				
+			// creating wire messages
+			case "wire":
+				// creating demo wire messages disabled as I can't get it to work
+				//demodata_create_wire();
+				break;
+				
+			// creating friends
+			case "friends":
+				demodata_create_friends();
+				break;
+		
+		}
+		
+	}
+}
 
 // add the menu items to the Site Admin list
 function demodata_add_menu_items()
@@ -59,8 +138,8 @@ function demodata_css()
 	}
 }
 
-// create demo data
-function demodata_create()
+// create demo users
+function demodata_create_users()
 {
 	global $wpdb;
 	global $current_site;
@@ -68,37 +147,12 @@ function demodata_create()
 	// get the users settings
 	$users = @$_POST["users"] == "" ? 100 : (int)$_POST["users"];
 	$users = $users > 1000 ? $users = 1000 : $users = $users;
-	$usernametemplate = @$_POST["usernametemplate"] == "" ? "Demo user [x]" : $_POST["usernametemplate"];
-	if (strpos($usernametemplate, "[x]") === false){ $usernametemplate .= " [x]"; }
 	$useremailtemplate = @$_POST["useremailtemplate"] == "" ? "demouser[x]@" . $current_site->domain : $_POST["useremailtemplate"];		
-	$membershiptype = @$_POST["membershiptype"] == "" ? 1 : (int)$_POST["membershiptype"];
-	
-	// get the blog settings
-	$maxblogsperuser = @$_POST["maxblogsperuser"] == "" ? 3 : (int)$_POST["maxblogsperuser"];
-	$maxblogsperuser = $maxblogsperuser > 5 ? $maxblogsperuser = 5 : $maxblogsperuser = $maxblogsperuser;
-	$blognametemplate = @$_POST["blognametemplate"] == "" ? "Demo blog [x]" : $_POST["blognametemplate"];	
-	
-	// get the post settings
-	$maxblogposts = @$_POST["maxblogposts"] == "" ? 50 : (int)$_POST["maxblogposts"];
-	$maxblogposts = $maxblogposts > 100 ? $maxblogposts = 100 : $maxblogposts = $maxblogposts;
-	$maxpostlength = @$_POST["maxpostlength"] == "" ? 10 : (int)$_POST["maxpostlength"];
-	$maxpostlength = $maxpostlength > 50 ? $maxpostlength = 50 : $maxpostlength = $maxpostlength;
-	$maxpostlength = $maxpostlength < 1 ? $maxpostlength = 1 : $maxpostlength = $maxpostlength;
-	
-	// get the links settings
-	$maxbloglinks = @$_POST["maxbloglinks"] == "" ? 25 : (int)$_POST["maxbloglinks"];
-	$maxbloglinks = $maxbloglinks > 100 ? $maxbloglinks = 100 : $maxbloglinks = $maxbloglinks;
 	
 	// check all the settings
-	if ($users != "" &&
-		$usernametemplate != "" &&
-		$useremailtemplate != "" &&
-		$membershiptype != "" && 
-		$maxblogsperuser != "" &&
-		$blognametemplate != "" &&
-		$maxblogposts != "" &&
-		$maxpostlength != "" &&
-		$maxbloglinks != ""
+	if (
+		$users != "" &&
+		$useremailtemplate != ""
 	)
 	{
 		$go = true;
@@ -109,9 +163,13 @@ function demodata_create()
 	// if the settings are OK
 	if ($go)
 	{
+	
+		// turn off new registration notifications
+		$registrationnotification = get_site_option("registrationnotification");
+		update_site_option("registrationnotification", "no");
+	
+		$success = true;
 		$userx = 0;
-		$blogx = 0;
-		$postx = 0;
 		
 		// loop the number of required users
 		for($u = 0; $u < $users; $u++)
@@ -119,123 +177,45 @@ function demodata_create()
 			$userx++;
 			
 			// generate the details for this user
-			$username = str_replace("[x]", $userx, $usernametemplate);
+			// get a random name
+			$username = demodata_firstname() . " " . demodata_lastname();
 			$email = str_replace("[x]", $userx, $useremailtemplate);
 			$random_password = substr(md5(uniqid(microtime())), 0, 6);
 			
 			// check the user can be created
-			if ($userid = wp_create_user($username, $random_password, $email) > 0)
+			if (!wp_create_user($username, $random_password, $email) > 0)
 			{
-			
-				// if the membership type is 1 or 2
-				if ($membershiptype == 1 || $membershiptype == 2)
-				{
-					// set the minimum number of blogs
-					if ($membershiptype == 1)
-					{
-						$minblogs = 1;
-					} else {
-						$minblogs = 0;
-					}
-					
-					// get a random number of blogs
-					$blogs = rand($minblogs, $maxblogsperuser);
-					
-					// loop the number of required blogs
-					for($b = 0; $b < $blogs; $b++)
-					{
-					
-						$blogx++;
-						
-						$blogname = str_replace("[x]", $blogx, $blognametemplate);
-						$blogdomain = "demoblog" . $blogx . "." . $current_site->domain;
-						
-						// check the blog can be created
-						if ($blogid = wpmu_create_blog($blogdomain, "/", $blogname, $userid, "", 1))
-						{
-							// switch to this blog
-							switch_to_blog($blogid);
-							
-							// get a random number of blog posts
-							$posts = rand(0, $maxblogposts);
-							
-							// loop the number of required posts
-							for($p = 0; $p < $posts; $p++)
-							{
-							
-								$postx++;
-								
-								// generate the random post data
-								$postcontent = demodata_generate_html(rand(1, $maxpostlength));
-								$post = array('post_status' => 'live',
-								'post_type' => 'post',
-								'post_author' => $userid,
-								'ping_status' => 'open',
-								'post_parent' => 0,
-								'menu_order' => 0,
-								'to_ping' => '',
-								'pinged' => '',
-								'post_password' => '',
-								'guid' => 'http://' . $blogdomain . '/post' . $postx,
-								'post_content_filtered' => '',
-								'post_excerpt' => '',
-								'import_id' => 0,
-								'post_title' => 'Demo post ' . $postx,
-								'post_content' => $postcontent,
-								'post_excerpt' => '');
-							
-								// see if the post can be inserted
-								if (!wp_insert_post($post))
-								{
-									$postx--;
-									// break out of this loop
-									break;
-								}
-							
-							}
-							
-						} else {
-							$blogx--;
-							// break out of this loop
-							break;
-						}
-					
-					}
-				}
-			} else {
+				$success = false;
+				$error = "Error creating user " . $userx;
 				$userx--;
 				// break out of this loop
 				break;
 			}
 		}
+		
+		// turn registration notification back on
+		update_site_option("registrationnotification", $registrationnotification);
 	
 		if ($success)
 		{
 		
 			echo '
 			<div class="demodatasuccess">
-			<p>' . __("You created the following demo data:") . '</p>
-			<ul>
-			<li>' . __("Users") . ': ' . $userx . '</li>
-			<li>' . __("Blogs") . ': ' . $blogsx . '</li>
-			<li>' . __("Posts") . ': ' . $postsx . '</li>
-			<li>' . __("Blogroll links") . ': ' . $linksx . '</li>
-			</ul>
+			<p>' . $userx . " " . __("demo users created") . '</p>
 			<p><a href="http://' . $current_site->domain . '">' . __("Your system is now ready for testing here.") . '</a></p>
 			</div>
 			';
+			
 		} else {
+		
 			echo '
 			<div class="demodataerror">
-			<p>' . __("Sorry, there was an error creating your demo data. The following data was created:") . '</p>
-			<ul>
-			<li>' . __("Users") . ': ' . $userx . '</li>
-			<li>' . __("Blogs") . ': ' . $blogsx . '</li>
-			<li>' . __("Posts") . ': ' . $postsx . '</li>
-			<li>' . __("Blogroll links") . ': ' . $linksx . '</li>
-			</ul>
+			<p>' . $userx . ' ' . __("demo users created") . '</p>
+			<p>' . __("Errors encountered:") . ' ' . $error . '</p>
+			<p><a href="http://' . $current_site->domain . '">' . __("You can test this data in your system here.") . '</a></p>
 			</div>
 			';
+			
 		}
 	} else {
 	
@@ -248,6 +228,1178 @@ function demodata_create()
 	}
 }
 
+// create demo blogs
+function demodata_create_blogs()
+{
+	global $wpdb;
+	global $current_site;
+	
+	// get the blog settings
+	$membershiptype = @$_POST["membershiptype"] == "" ? 1 : (int)$_POST["membershiptype"];
+	$maxblogsperuser = @$_POST["maxblogsperuser"] == "" ? 1 : (int)$_POST["maxblogsperuser"];
+	$maxblogsperuser = $maxblogsperuser > 5 ? $maxblogsperuser = 5 : $maxblogsperuser = $maxblogsperuser;
+	
+	// check all the settings
+	if (
+		$membershiptype != "" && 
+		$maxblogsperuser != ""
+	)
+	{
+		$go = true;
+	} else {
+		$go = false;
+	}
+	
+	// if the settings are OK
+	if ($go)
+	{
+		
+		// turn off new registration notifications
+		$registrationnotification = get_site_option("registrationnotification");
+		update_site_option("registrationnotification", "no");
+	
+		$success = true;
+		$blogx = 0;
+				
+		// set the minimum number of blogs
+		if ($membershiptype == 1)
+		{
+			$minblogs = 1;
+		} else {
+			$minblogs = 0;
+		}
+		
+		// get users
+		$sql = "select id from " . $wpdb->users . ";";
+		$users = $wpdb->get_results($sql);
+
+		// loop users
+		foreach($users as $user)
+		{
+		
+			// get a random number of blogs
+			$blogs = rand($minblogs, $maxblogsperuser);
+			
+			// loop the number of required blogs
+			for($b = 0; $b < $blogs; $b++)
+			{
+			
+				$blogx++;
+				
+				// get a random blogname
+				$blogname = demodata_blogname();
+				$blogdomain = "demoblog" . $blogx;
+
+				// check the blog can be created
+				if (!demodata_create_blog($blogx, $blogdomain, $blogname, $user->id))
+				{
+					$success = false;
+					$error = "Error creating blog " . $blogx;
+					$blogx--;
+					// break out of this loop
+					break;
+				}
+				
+			}
+			
+		}
+		
+		// turn registration notification back on
+		update_site_option("registrationnotification", $registrationnotification);
+	
+		if ($success)
+		{
+		
+			echo '
+			<div class="demodatasuccess">
+			<p>' . $blogx . " " . __("demo blogs created") . '</p>
+			<p><a href="http://' . $current_site->domain . '">' . __("Your system is now ready for testing here.") . '</a></p>
+			</div>
+			';
+			
+		} else {
+		
+			echo '
+			<div class="demodataerror">
+			<p>' . $blogx . ' ' . __("demo blogs created") . '</p>
+			<p>' . __("Errors encountered:") . ' ' . $error . '</p>
+			<p><a href="http://' . $current_site->domain . '">' . __("You can test this data in your system here.") . '</a></p>
+			</div>
+			';
+			
+		}
+	} else {
+	
+		echo '
+		<div class="demodataerror">
+		<p>' . __("Some of your settings were not valid. Please check all the settings below.") . '</p>
+		</div>
+		';
+	
+	}
+}
+
+// create demo categories
+function demodata_create_categories()
+{
+	global $wpdb;
+	global $current_site;
+	
+	// get the categories and tags settings
+	$maxblogcategories = @$_POST["maxblogcategories"] == "" ? 10 : (int)$_POST["maxblogcategories"];
+	$maxblogcategories = $maxblogcategories > 25 ? $maxblogcategories = 25 : $maxblogcategories = $maxblogcategories;
+	$maxblogtags = $maxblogtags > 100 ? $maxblogtags = 100 : $maxblogtags = $maxblogtags;
+	
+	// check all the settings
+	if (
+		$maxblogcategories != ""
+	)
+	{
+		$go = true;
+	} else {
+		$go = false;
+	}
+	
+	// if the settings are OK
+	if ($go)
+	{
+	
+		$categoryx = 0;
+		$success = true;
+		
+		// get blogs
+		$sql = "select blog_id, domain from " . $wpdb->blogs . ";";
+		$blogs = $wpdb->get_results($sql);
+		
+		// loop blogs
+		foreach($blogs as $blog)
+		{
+		
+			// switch to this blog
+			switch_to_blog($blog->blog_id);
+		
+			// get a random number of blog categories
+			$categories = rand(0, $maxblogcategories);
+			
+			// loop the number of required categories
+			for($c = 0; $c < $categories; $c++)
+			{
+			
+				$categoryx++;
+
+				// see if the category can be inserted
+				if (!demodata_create_category($blog->domain, $categoryx))
+				{
+					$categoryx--;
+				}			
+			}
+			
+			// switch back to the main blog
+			restore_current_blog();
+		}
+	
+		if ($success)
+		{
+		
+			echo '
+			<div class="demodatasuccess">
+			<p>' . $categoryx . " " . __("demo categories created") . '</p>
+			<p><a href="http://' . $current_site->domain . '">' . __("Your system is now ready for testing here.") . '</a></p>
+			</div>
+			';
+			
+		} else {
+		
+			echo '
+			<div class="demodataerror">
+			<p>' . $categoryx . ' ' . __("demo categories created") . '</p>
+			<p>' . __("Errors encountered:") . ' ' . $error . '</p>
+			<p><a href="http://' . $current_site->domain . '">' . __("You can test this data in your system here.") . '</a></p>
+			</div>
+			';
+			
+		}
+	} else {
+	
+		echo '
+		<div class="demodataerror">
+		<p>' . __("Some of your settings were not valid. Please check all the settings below.") . '</p>
+		</div>
+		';
+	
+	}
+}
+
+// create demo posts
+function demodata_create_posts()
+{
+	global $wpdb;
+	global $current_site;
+	
+	// get the post settings
+	$maxblogposts = @$_POST["maxblogposts"] == "" ? 50 : (int)$_POST["maxblogposts"];
+	$maxblogposts = $maxblogposts > 100 ? $maxblogposts = 100 : $maxblogposts = $maxblogposts;
+	$maxpostlength = @$_POST["maxpostlength"] == "" ? 10 : (int)$_POST["maxpostlength"];
+	$maxpostlength = $maxpostlength > 50 ? $maxpostlength = 50 : $maxpostlength = $maxpostlength;
+	$maxpostlength = $maxpostlength < 1 ? $maxpostlength = 1 : $maxpostlength = $maxpostlength;
+	
+	// check all the settings
+	if (
+		$maxblogposts != "" &&
+		$maxpostlength != ""
+	)
+	{
+		$go = true;
+	} else {
+		$go = false;
+	}
+	
+	// if the settings are OK
+	if ($go)
+	{
+	
+		$postx = 0;
+		$success = true;
+		
+		// get blogs
+		$sql = "select blog_id, domain from " . $wpdb->blogs . ";";
+		$blogs = $wpdb->get_results($sql);
+		
+		// loop blogs
+		foreach($blogs as $blog)
+		{
+		
+			// switch to this blog
+			switch_to_blog($blog->blog_id);
+		
+			// get a random number of blog posts
+			$posts = rand(0, $maxblogposts);
+			
+			// loop the number of required posts
+			for($p = 0; $p < $posts; $p++)
+			{
+			
+				$postx++;
+
+				// see if the post can be inserted
+				if (!demodata_create_post($blog->domain, $maxpostlength, $postx))
+				{
+					$postx--;
+				}			
+			}
+			
+			// switch back to the main blog
+			restore_current_blog();
+		}
+	
+		if ($success)
+		{
+		
+			echo '
+			<div class="demodatasuccess">
+			<p>' . $postx . " " . __("demo posts created") . '</p>
+			<p><a href="http://' . $current_site->domain . '">' . __("Your system is now ready for testing here.") . '</a></p>
+			</div>
+			';
+			
+		} else {
+		
+			echo '
+			<div class="demodataerror">
+			<p>' . $postx . ' ' . __("demo posts created") . '</p>
+			<p>' . __("Errors encountered:") . ' ' . $error . '</p>
+			<p><a href="http://' . $current_site->domain . '">' . __("You can test this data in your system here.") . '</a></p>
+			</div>
+			';
+			
+		}
+	} else {
+	
+		echo '
+		<div class="demodataerror">
+		<p>' . __("Some of your settings were not valid. Please check all the settings below.") . '</p>
+		</div>
+		';
+	
+	}
+}
+
+// create demo pages
+function demodata_create_pages()
+{
+	global $wpdb;
+	global $current_site;
+
+	// get the pages settings
+	$maxpages = @$_POST["maxpages"] == "" ? 25 : (int)$_POST["maxpages"];
+	$maxpages = $maxpages > 25 ? $maxpages = 25 : $maxpages = $maxpages;
+	$maxtoppages = @$_POST["maxtoppages"] == "" ? 5 : (int)$_POST["maxtoppages"];
+	$maxtoppages = $maxtoppages > 5 ? $maxtoppages = 5 : $maxtoppages = $maxtoppages;
+	$maxpageslevels = @$_POST["maxpageslevels"] == "" ? 3 : (int)$_POST["maxpageslevels"];
+	$maxpageslevels = $maxpageslevels > 3 ? $maxpageslevels = 3 : $maxpageslevels = $maxpageslevels;
+	$maxpagelength = @$_POST["maxpagelength"] == "" ? 10 : (int)$_POST["maxpagelength"];
+	$maxpagelength = $maxpagelength > 10 ? $maxpagelength = 10 : $maxpagelength = $maxpagelength;
+	
+	// check all the settings
+	if (
+		$maxpages != ""
+		&& $maxtoppages != ""
+		&& $maxpageslevels != ""
+		&& $maxpagelength != ""
+	)
+	{
+		$go = true;
+	} else {
+		$go = false;
+	}
+	
+	// if the settings are OK
+	if ($go)
+	{
+	
+		$pagex = 0;
+		$success = true;
+		
+		// get blogs
+		$sql = "select blog_id, domain from " . $wpdb->blogs . ";";
+		$blogs = $wpdb->get_results($sql);
+		
+		// loop blogs
+		foreach($blogs as $blog)
+		{
+		
+			// switch to this blog
+			switch_to_blog($blog->blog_id);
+			
+			// get a random number of top pages
+			$toppages = rand(1, $maxtoppages);
+			
+			// loop the number of top pages
+			for($p = 0; $p < $toppages; $p++)
+			{
+				$pagex++;
+				
+				$id = demodata_create_page($blog->domain, 0, $maxpagelength, $pagex);
+				
+				if (!$id)
+				{
+					$pagex--;
+				} else {
+					// add the page id to the array
+					$pageids[0][] = $id;
+				}
+			}
+			
+			// get random number of sublevels
+			$levels = rand(1, $maxpageslevels);
+			
+			// if the levels is greater than 1
+			if ($levels > 1)
+			{
+				// loop the top level pages
+				foreach($pageids[0] as $pageid)
+				{
+					$pagex++;
+				
+					$id = demodata_create_page($blog->domain, $pageid, $maxpagelength, $pagex);
+					
+					if (!$id)
+					{
+						$pagex--;
+					} else {
+						// add the page id to the array
+						$pageids[1][] = $id;
+					}
+				}
+			}
+			
+			// if the levels is greater than 2
+			if ($levels > 2)
+			{
+				// loop the level 1 pages
+				foreach($pageids[1] as $pageid)
+				{
+					$pagex++;
+				
+					$id = demodata_create_page($blog->domain, $pageid, $maxpagelength, $pagex);
+					
+					if (!$id)
+					{
+						$pagex--;
+					}
+				}
+			}
+			
+			// switch back to the main blog
+			restore_current_blog();
+		}
+	
+		if ($success)
+		{
+		
+			echo '
+			<div class="demodatasuccess">
+			<p>' . $pagex . " " . __("demo pages created") . '</p>
+			<p><a href="http://' . $current_site->domain . '">' . __("Your system is now ready for testing here.") . '</a></p>
+			</div>
+			';
+			
+		} else {
+		
+			echo '
+			<div class="demodataerror">
+			<p>' . $pagex . ' ' . __("demo pages created") . '</p>
+			<p>' . __("Errors encountered:") . ' ' . $error . '</p>
+			<p><a href="http://' . $current_site->domain . '">' . __("You can test this data in your system here.") . '</a></p>
+			</div>
+			';
+			
+		}
+	
+	} else {
+	
+		echo '
+		<div class="demodataerror">
+		<p>' . __("Some of your settings were not valid. Please check all the settings below.") . '</p>
+		</div>
+		';
+	
+	}
+}
+
+// create demo comments
+function demodata_create_comments()
+{
+	global $wpdb;
+	global $current_site;
+	
+	// get the comments settings
+	$maxcomments = @$_POST["maxcomments"] == "" ? 50 : (int)$_POST["maxcomments"];
+	$maxcomments = $maxcomments > 50 ? $maxcomments = 50 : $maxcomments = $maxcomments;
+	
+	// check all the settings
+	if (
+		$maxcomments != ""
+	)
+	{
+		$go = true;
+	} else {
+		$go = false;
+	}
+	
+	// if the settings are OK
+	if ($go)
+	{
+	
+		$commentx = 0;
+		$success = true;
+		
+		// get blogs
+		$sql = "select blog_id, domain from " . $wpdb->blogs . ";";
+		$blogs = $wpdb->get_results($sql);
+		
+		// loop blogs
+		foreach($blogs as $blog)
+		{
+		
+			// switch to this blog
+			switch_to_blog($blog->blog_id);
+		
+			// get posts
+			$sql = "select id from " . $wpdb->posts . ";";
+			$posts = $wpdb->get_results($sql);
+			
+			// loop posts
+			foreach($posts as $post)
+			{
+			
+				// get a random number of comments
+				$comments = rand(0, $maxcomments);
+				
+				// loop the number of required comments
+				for($c = 0; $c < $comments; $c++)
+				{
+					$commentx++;
+					
+					// see if the comment can be inserted
+					if (!demodata_create_comment($blog->domain, $post->id, $commentx))
+					{
+						// continue
+						$commentx--;
+					}
+				}
+				
+			}
+			
+			// switch back to the main blog
+			restore_current_blog();
+		}
+	
+		if ($success)
+		{
+		
+			echo '
+			<div class="demodatasuccess">
+			<p>' . $commentx . ' ' . __("demo comments created") . '</p>
+			<p><a href="http://' . $current_site->domain . '">' . __("Your system is now ready for testing here.") . '</a></p>
+			</div>
+			';
+			
+		} else {
+		
+			echo '
+			<div class="demodataerror">
+			<p>' . $commentx . ' ' . __("demo comments created") . '</p>
+			<p>' . __("Errors encountered:") . ' ' . $error . '</p>
+			<p><a href="http://' . $current_site->domain . '">' . __("You can test this data in your system here.") . '</a></p>
+			</div>
+			';
+			
+		}
+	} else {
+	
+		echo '
+		<div class="demodataerror">
+		<p>' . __("Some of your settings were not valid. Please check all the settings below.") . '</p>
+		</div>
+		';
+	
+	}
+}
+
+// create demo links
+function demodata_create_links()
+{
+	global $wpdb;
+	global $current_site;
+	
+	// get the links settings
+	$maxbloglinks = @$_POST["maxbloglinks"] == "" ? 25 : (int)$_POST["maxbloglinks"];
+	$maxbloglinks = $maxbloglinks > 100 ? $maxbloglinks = 100 : $maxbloglinks = $maxbloglinks;
+	
+	// check all the settings
+	if (
+		$maxbloglinks != ""
+	)
+	{
+		$go = true;
+	} else {
+		$go = false;
+	}
+	
+	// if the settings are OK
+	if ($go)
+	{
+	
+		$linkx = 0;
+		$success = true;
+		
+		// get blogs
+		$sql = "select blog_id, domain from " . $wpdb->blogs . ";";
+		$blogs = $wpdb->get_results($sql);
+		
+		// loop blogs
+		foreach($blogs as $blog)
+		{
+		
+			// switch to this blog
+			switch_to_blog($blog->blog_id);
+		
+			// get a random number of bookmarks
+			$links = rand(0, $maxbloglinks);
+			
+			// loop the number of required bookmarks
+			for($l = 0; $l < $links; $l++)
+			{
+				$linkx++;
+				if (!demodata_create_link($blog->domain, $linkx))
+				{
+					// continue
+					$linkx--;
+				}
+			}
+			
+			// switch back to the main blog
+			restore_current_blog();
+		}
+	
+		if ($success)
+		{
+		
+			echo '
+			<div class="demodatasuccess">
+			<p>' . $linkx . " " . __("demo links created") . '</p>
+			<p><a href="http://' . $current_site->domain . '">' . __("Your system is now ready for testing here.") . '</a></p>
+			</div>
+			';
+			
+		} else {
+		
+			echo '
+			<div class="demodataerror">
+			<p>' . $linkx . ' ' . __("demo links created") . '</p>
+			<p>' . __("Errors encountered:") . ' ' . $error . '</p>
+			<p><a href="http://' . $current_site->domain . '">' . __("You can test this data in your system here.") . '</a></p>
+			</div>
+			';
+			
+		}
+	} else {
+	
+		echo '
+		<div class="demodataerror">
+		<p>' . __("Some of your settings were not valid. Please check all the settings below.") . '</p>
+		</div>
+		';
+	
+	}
+}
+
+// create demo groups
+function demodata_create_groups()
+{
+	// detect BuddyPress
+	$buddypress = defined( 'BP_ROOT_BLOG' );
+	
+	if ($buddypress)
+	{
+
+		global $wpdb;
+		global $current_site;
+		
+		// get groups settings
+		$maxgroups = @$_POST["maxgroups"] == "" ? 250 : (int)$_POST["maxgroups"];
+		$maxgroups = $maxgroups > 500 ? $maxgroups = 500 : $maxgroups = $maxgroups;
+		$maxgroupmembership = @$_POST["maxgroupmembership"] == "" ? 25 : (int)$_POST["maxgroupmembership"];
+		$maxgroupmembership = $maxgroupmembership > 50 ? $maxgroupmembership = 50 : $maxgroupmembership = $maxgroupmembership;
+		
+		// check all the settings
+		if (
+			$maxgroups != "" &&
+			$maxgroupmembership != ""
+		)
+		{
+			$go = true;
+		} else {
+			$go = false;
+		}
+		
+		// if the settings are OK
+		if ($go)
+		{
+		
+			$groupx = 0;
+			$memberx = 0;
+			$success = true;
+			
+			// get a random number of groups
+			$groups = rand(1, $maxgroups);
+		
+			// loop the number of required groups
+			for($g = 0; $g < $groups; $g++)
+			{
+				$groupx++;
+				
+				// get a random group name
+				$groupname = demodata_groupname();
+				
+				$newgroupid = demodata_create_group( $groupname, $groupsx );
+				
+				// save the group
+				if ( !$newgroupid )
+				{
+				
+					$success = false;
+					$error = "Error creating group " . $groupx;
+					$groupx--;
+					// break out of this loop
+					break;
+					
+				} else {
+				
+					$memberx++;
+
+					// get a random number of group members
+					$members = rand(1, $maxgroupmembership);
+					
+					$admin = demodata_create_group_member( $newgroupid, 1, $memberx );
+					
+					// if the admin member could not be saved
+					if ( !$admin )
+					{
+					
+						$success = false;
+						$error = "Error creating group member " . $memberx;
+						$memberx--;
+						// break out of this loop
+						break;
+						
+					} else {
+					
+						// loop the number of required members of this group
+						for($m = 0; $m < $members; $m++)
+						{		
+					
+							$memberx++;
+							
+							// if the member could not be saved
+							if ( !demodata_create_group_member( $newgroupid, 0, $membersx ) )
+							{
+								$success = false;
+								$error = "Error creating group member " . $memberx;
+								$memberx--;
+								// break out of this loop
+								break;
+							}
+						}
+					}
+				}
+			}
+		
+			if ($success)
+			{
+			
+				echo '
+				<div class="demodatasuccess">
+				<p>' . $groupx . " " . __("demo groups created") . '</p>
+				<p>' . $memberx . ' ' . __("demo group members created") . '</p>
+				<p><a href="http://' . $current_site->domain . '">' . __("Your system is now ready for testing here.") . '</a></p>
+				</div>
+				';
+				
+			} else {
+			
+				echo '
+				<div class="demodataerror">
+				<p>' . $groupx . ' ' . __("demo groups created") . '</p>
+				<p>' . $memberx . ' ' . __("demo group members created") . '</p>
+				<p>' . __("Errors encountered:") . ' ' . $error . '</p>
+				<p><a href="http://' . $current_site->domain . '">' . __("You can test this data in your system here.") . '</a></p>
+				</div>
+				';
+				
+			}
+		} else {
+		
+			echo '
+			<div class="demodataerror">
+			<p>' . __("Some of your settings were not valid. Please check all the settings below.") . '</p>
+			</div>
+			';
+		
+		}
+	} else {
+		
+		echo '
+		<div class="demodataerror">
+		<p>' . __("BuddyPress not found.") . '</p>
+		</div>
+		';
+	
+	}
+}
+
+// create demo friends
+function demodata_create_friends()
+{
+
+	// detect BuddyPress
+	$buddypress = defined( 'BP_ROOT_BLOG' );
+	
+	if ($buddypress)
+	{
+
+		global $wpdb;
+		global $current_site;
+		
+		// get friends settings
+		$maxfriends = @$_POST["maxfriends"] == "" ? 50 : (int)$_POST["maxfriends"];
+		$maxfriends = $maxfriends > 100 ? $maxfriends = 100 : $maxfriends = $maxfriends;
+		
+		// check all the settings
+		if (
+			$maxfriends != ""
+		)
+		{
+			$go = true;
+		} else {
+			$go = false;
+		}
+		
+		// if the settings are OK
+		if ($go)
+		{
+		
+			$friendsx = 0;
+			$success = true;
+			
+			// get users
+			$sql = "select id from " . $wpdb->users . " order by id;";
+			$users = $wpdb->get_results($sql);
+
+			// loop users
+			foreach ($users as $user)
+			{
+			
+				// get a random mumber of friends
+				$friends = rand(1, $maxfriends);
+				
+				// loop the required number of friends
+				for ($f = 0; $f < $friends; $f++)
+				{
+					$friendx++;
+				
+					// create the friendship
+					if (!demodata_create_friendship($user->id))
+					{
+						$success = false;
+						$error = "Error creating friendship " . $friendx;
+						$friendx--;
+						break;
+					}
+				
+				}
+				
+			}
+		
+			if ($success)
+			{
+			
+				echo '
+				<div class="demodatasuccess">
+				<p>' . $friendx . " " . __("demo friendships created") . '</p>
+				<p><a href="http://' . $current_site->domain . '">' . __("Your system is now ready for testing here.") . '</a></p>
+				</div>
+				';
+				
+			} else {
+			
+				echo '
+				<div class="demodataerror">
+				<p>' . $friendx . ' ' . __("demo friendships created") . '</p>
+				<p>' . __("Errors encountered:") . ' ' . $error . '</p>
+				<p><a href="http://' . $current_site->domain . '">' . __("You can test this data in your system here.") . '</a></p>
+				</div>
+				';
+				
+			}
+		} else {
+		
+			echo '
+			<div class="demodataerror">
+			<p>' . __("Some of your settings were not valid. Please check all the settings below.") . '</p>
+			</div>
+			';
+		
+		}
+	} else {
+		
+		echo '
+		<div class="demodataerror">
+		<p>' . __("BuddyPress not found.") . '</p>
+		</div>
+		';
+	
+	}
+}
+
+// create demo wire messages
+function demodata_create_wire()
+{
+	// detect BuddyPress
+	$buddypress = defined( 'BP_ROOT_BLOG' );
+	
+	if ($buddypress)
+	{
+
+		global $wpdb;
+		global $current_site;
+		
+		// get wire settings
+		$maxwire = @$_POST["maxwire"] == "" ? 25 : (int)$_POST["maxwire"];
+		$maxwire = $maxwire > 50 ? $maxwire = 50 : $maxwire = $maxwire;
+		
+		// check all the settings
+		if (
+			$maxwire != ""
+		)
+		{
+			$go = true;
+		} else {
+			$go = false;
+		}
+		
+		// if the settings are OK
+		if ($go)
+		{
+		
+			$friendsx = 0;
+			$success = true;
+			
+			// get users
+			$sql = "select id from " . $wpdb->users . " order by id;";
+			$users = $wpdb->get_results($sql);
+			
+			// loop users
+			foreach ($users as $user)
+			{
+			
+				// get a random number of wire messages
+				$wires = rand(0, $maxwire);
+				
+				// loop the number of required wires
+				for($w = 0; $w < $wires; $w++)
+				{
+					$wirex++;
+					// see if the wire can be created
+					if (!demodata_create_wire_message($user->id))
+					{
+						// continue
+						$wirex--;
+					}
+				}
+				
+			}
+		
+			if ($success)
+			{
+			
+				echo '
+				<div class="demodatasuccess">
+				<p>' . $wirex . " " . __("demo wire messages created") . '</p>
+				<p><a href="http://' . $current_site->domain . '">' . __("Your system is now ready for testing here.") . '</a></p>
+				</div>
+				';
+				
+			} else {
+			
+				echo '
+				<div class="demodataerror">
+				<p>' . $wirex . ' ' . __("demo wire messages created") . '</p>
+				<p>' . __("Errors encountered:") . ' ' . $error . '</p>
+				<p><a href="http://' . $current_site->domain . '">' . __("You can test this data in your system here.") . '</a></p>
+				</div>
+				';
+				
+			}
+		} else {
+		
+			echo '
+			<div class="demodataerror">
+			<p>' . __("Some of your settings were not valid. Please check all the settings below.") . '</p>
+			</div>
+			';
+		
+		}
+	} else {
+		
+		echo '
+		<div class="demodataerror">
+		<p>' . __("BuddyPress not found.") . '</p>
+		</div>
+		';
+	
+	}
+}
+
+// ======================================================
+// Data creation functions
+// ======================================================
+
+// create a bookmark
+function demodata_create_link($blogdomain, $linkx)
+{
+	$link = array(
+		'link_id' => 0,
+		'link_name' => 'Bookmark ' . $linkx,
+		'link_url' => 'http://' . $blogdomain . '/#bookmark' . $linkx,
+		'link_rating' => 0
+	);
+	return wp_insert_link($link);
+}
+
+// create a comments
+function demodata_create_comment($blogdomain, $postid, $commentx)
+{
+	$commentcontent = demodata_generate_random_text(1000);
+	$time = current_time('mysql', $gmt = 0); 
+	$comment = array(
+	    'comment_post_ID' => $postid,
+	    'comment_author' => 'Commenter '.$commentx,
+	    'comment_author_email' => 'commenter@' . $blogdomain,
+	    'comment_author_url' => 'http://commenter.url',
+	    'comment_content' => $commentcontent,
+	    'comment_type' => '',
+	    'comment_parent' => 0,
+	    'user_ID' => 0,
+	    'comment_author_IP' => '127.0.0.1',
+	    'comment_agent' => 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.10) Gecko/2009042316 Firefox/3.0.10 (.NET CLR 3.5.30729)',
+	    'comment_date' => $time,
+	    'comment_date_gmt' => $time,
+	    'comment_approved' => 1,
+	);
+	return wp_insert_comment($comment);
+}
+
+// create a category
+function demodata_create_category($blogdomain, $categoryx)
+{
+	$cat = ucfirst(strtolower(demodata_generate_random_text(20)));
+	return wp_create_category( $cat );
+}
+
+// create a post
+function demodata_create_post($blogdomain, $maxpostlength, $postx)
+{
+	// generate the random post data
+	$postcontent = demodata_generate_html(rand(1, $maxpostlength));
+	// generate array of category ids
+	$cats = demodata_random_categories($blogdomain);
+	$post = array('post_status' => 'live',
+	'post_type' => 'post',
+	'post_author' => $userid,
+	'ping_status' => 'open',
+	'post_parent' => 0,
+	'menu_order' => 0,
+	'to_ping' => '',
+	'pinged' => '',
+	'post_password' => '',
+	'guid' => 'http://' . $blogdomain . '/post' . $postx,
+	'post_content_filtered' => '',
+	'post_excerpt' => '',
+	'import_id' => 0,
+	'post_status' => 'publish',
+	'post_title' => 'Demo post ' . $postx,
+	'post_content' => $postcontent,
+	'post_excerpt' => '',
+	'post_category' => $cats);
+	return wp_insert_post($post);
+}
+
+// create a page
+function demodata_create_page($blogdomain, $parentid, $maxpagelength, $pagex)
+{
+	$pagecontent = demodata_generate_html(rand(1, $maxpagelength));
+	$page = array('post_status' => 'live',
+	'post_type' => 'page',
+	'post_author' => 1,
+	'ping_status' => 'open',
+	'post_parent' => $parentid,
+	'menu_order' => 0,
+	'to_ping' => '',
+	'pinged' => '',
+	'post_password' => '',
+	'guid' => 'http://' . $blogdomain . '/page' . $pagex,
+	'post_content_filtered' => '',
+	'post_excerpt' => '',
+	'import_id' => 0,
+	'post_status' => 'publish',
+	'post_title' => 'Demo page ' . $pagex,
+	'post_content' => $pagecontent,
+	'post_excerpt' => '',
+	'post_category' => $cats);
+	return wp_insert_post( $page );
+}
+
+// create a blog (taken from /wp-admin/wpmu-edit.php)
+function demodata_create_blog($newid, $blogdomain, $blogname, $user_id)
+{
+	global $current_site;
+	global $current_user;
+	global $wpdb;
+	
+	$base = "/";
+	
+	if( constant('VHOST') == 'yes' ) {
+		$newdomain = $blogdomain.".".$current_site->domain;
+		$path = $base;
+	} else {
+		$newdomain = $current_site->domain;
+		$path = $base.$blogdomain.'/';
+	}
+	
+	// install this blog
+	$meta = apply_filters('signup_create_blog_meta', array ('lang_id' => 1, 'public' => 1));
+	$id = wpmu_create_blog($newdomain, $path, $blogname, $user_id , $meta, $current_site->id);
+
+	if( !is_wp_error($id) ) {
+		if( get_user_option( $user_id, 'primary_blog' ) == 1 )
+			update_user_option( $user_id, 'primary_blog', $id, true );
+			
+		// add the user to the blog
+		add_user_to_blog($id, $user_id, 'administrator');
+			
+		return $id;
+	} else {
+		return false;
+	}
+}
+
+// ======================================================
+// BuddyPress functions
+// ======================================================
+
+// create a wire message
+function demodata_create_wire_message($userid)
+{
+	global $wpdb;
+
+	$message = demodata_generate_random_text(100);
+	
+	return bp_wire_new_post( 1, $message, "wire", false,  $wpdb->base_prefix . "user_" . $userid . "_wire");
+}
+
+// create a BuddyPress group
+function demodata_create_group($groupname, $num)
+{
+	// set up the new group
+	$group_obj = new BP_Groups_Group();
+	$group_obj->name = $groupname;
+	$group_obj->slug = sanitize_title( $groupname );
+	$group_obj->description = "Demo group " . $num . " created by Demo Data Creator plugin.";
+	$group_obj->status = 'public';
+	$group_obj->is_invitation_only = 0;
+	$group_obj->enable_wire = 1;
+	$group_obj->enable_forum = 1;
+	$group_obj->enable_photos = 1;
+	$group_obj->photos_admin_only = 0;
+	$group_obj->date_created = time();
+	
+	// save the group
+	$saved = $group_obj->save();
+	
+	if ( $saved )
+	{
+		return $group_obj->id;
+	} else {
+		return false;
+	}
+}
+
+// create a BuddyPress group member
+function demodata_create_group_member($group_id, $admin, $num)
+{	
+	$user_id = demodata_random_user_id();
+	return groups_join_group( $group_id, $user_id );
+}
+
+// create a BuddyPress friendship
+function demodata_create_friendship($userid)
+{
+	return friends_add_friend($userid, demodata_random_user_id($userid), true);
+}
+
+// ======================================================
+// Helper functions
+// ======================================================
+
+// get a random user id
+function demodata_random_user_id($id = 0)
+{
+	global $wpdb;
+	return $wpdb->get_var("select id from " . $wpdb->users . " where " . $wpdb->escape($id) . " = 0 or id <> " . $wpdb->escape($id) . " order by rand() limit 1;");
+}
+
 // delete demo data
 function demodata_delete()
 {
@@ -255,26 +1407,27 @@ function demodata_delete()
 	global $current_site;
 
 	echo '
-	<p>' . __("Deleting demo data...") . '</p>
+	<div class="demodatasuccess">
+	<h2>' . __("Deleting demo data...") . '</h2>
 	<ul>
 	';
 	
 	$i = 0;
 	
 	// delete user meta
-	$sql = "delete from wp_usermeta where user_id > 1;";
+	$sql = "delete from " . $wpdb->usermeta . " where user_id > 1;";
 	$users = $wpdb->query($sql);
 	
 	// count users
-	$sql = "select count(id) from wp_users where id > 1;";
+	$sql = "select count(id) from " . $wpdb->users . " where id > 1;";
 	$usercount = $wpdb->get_var($sql);
 	
 	// delete users
-	$sql = "delete from wp_users where id > 1;";
+	$sql = "delete from " . $wpdb->users . " where id > 1;";
 	$users = $wpdb->query($sql);
 	
 	// alter auto integer
-	$sql = "ALTER TABLE wp_users AUTO_INCREMENT = 2;";
+	$sql = "ALTER TABLE " . $wpdb->users . " AUTO_INCREMENT = 2;";
 	$users = $wpdb->query($sql);
 
 	echo '<li>' . $usercount . ' ' . ("users deleted") . '</li>
@@ -282,8 +1435,12 @@ function demodata_delete()
 	
 	$i = 0;
 	
+	// count blogs
+	$sql = "select count(blog_id) from " . $wpdb->blogs . " where blog_id > 1;";
+	$blogcount = $wpdb->get_var($sql);
+	
 	// delete blogs
-	$sql = "select blog_id from wp_blogs where blog_id > 1;";
+	$sql = "select blog_id from " . $wpdb->blogs . " where blog_id > 1;";
 	$blogs = $wpdb->get_results($sql);
 	foreach($blogs as $blog)
 	{
@@ -292,17 +1449,72 @@ function demodata_delete()
 			$i++;
 		}
 	}
-	echo '<li>' . $i . ' ' . __("blogs deleted") . '</li>
-	';
 	
 	// alter auto integer
-	$sql = "ALTER TABLE wp_blogs AUTO_INCREMENT = 2;";
+	$sql = "ALTER TABLE " . $wpdb->blogs . " AUTO_INCREMENT = 2;";
 	$users = $wpdb->query($sql);
+
+	echo '<li>' . $blogcount . ' ' . __("blogs deleted") . '</li>
+	';
 	
 	$i = 0;
 	
+	// detect BuddyPress
+	$buddypress = defined( 'BP_ROOT_BLOG' );
+	
+	if ($buddypress)
+	{
+		// delete user activity
+		$sql = "delete from " . $wpdb->base_prefix. "bp_activity_user_activity;";
+		$user_activity = $wpdb->query($sql);
+		
+		// delete user activity cached
+		$sql = "delete from " . $wpdb->base_prefix. "bp_activity_user_activity_cached;";
+		$user_activity_cached = $wpdb->query($sql);
+		
+		// delete site activity
+		$sql = "delete from " . $wpdb->base_prefix. "bp_activity_sitewide;";
+		$sitewide_activity = $wpdb->query($sql);
+	
+		// delete user meta
+		$sql = "delete from " . $wpdb->base_prefix. "bp_xprofile_data;";
+		$xprofile_data = $wpdb->query($sql);
+	
+		// delete group meta
+		$sql = "delete from " . $wpdb->base_prefix. "bp_groups_groupmeta;";
+		$groups_groupmeta = $wpdb->query($sql);
+		
+		// delete group membership
+		$sql = "delete from " . $wpdb->base_prefix. "bp_groups_members;";
+		$groups_members = $wpdb->query($sql);
+	
+		// delete group wire
+		$sql = "delete from " . $wpdb->base_prefix. "bp_groups_wire;";
+		$groups_wire = $wpdb->query($sql);
+	
+		// delete groups
+		$sql = "delete from " . $wpdb->base_prefix. "bp_groups;";
+		$groups = $wpdb->query($sql);
+		
+		// delete friendships
+		$sql = "delete from " . $wpdb->base_prefix. "bp_friends;";
+		$friends = $wpdb->query($sql);
+		
+		// delete user blog posts
+		$sql = "delete from " . $wpdb->base_prefix. "bp_user_blogs_posts;";
+		$user_blogs_posts = $wpdb->query($sql);
+		
+		// delete user blog comments
+		$sql = "delete from " . $wpdb->base_prefix. "bp_user_blogs_comments;";
+		$user_blogs_comments = $wpdb->query($sql);
+		
+		echo '<li>' . __("BuddyPress data deleted") . '</li>
+		';
+	}
+	
 	echo '
 	</ul>
+	</div>
 	';
 }
 
@@ -312,7 +1524,7 @@ function demodata_watch_form()
 	// if submitting form
 	if (is_array($_POST) && count($_POST) > 0 && isset($_POST["action"]))
 	{	
-		set_time_limit(600);
+		set_time_limit(300);
 	
 		if ($_POST["action"] == "create")
 		{
@@ -326,14 +1538,28 @@ function demodata_watch_form()
 	}
 }
 
+// ======================================================
+// Admin forms
+// ======================================================
+
 // write out the form
 function demodata_form()
 {
 	global $current_site;
+	global $wpdb;
+
+	// get the upgrade functions
+	require_once( ABSPATH . 'wp-admin/includes/upgrade.php');
+
+	// detect BuddyPress
+	$buddypress = defined( 'BP_ROOT_BLOG' );
 
 	echo '
 	<div class="wrap">
 	';
+	
+	if (function_exists('populate_queries'))
+	{
 	
 	demodata_watch_form();
 	
@@ -342,19 +1568,32 @@ function demodata_form()
 		<h2>' . __("Create demo data") . '</h2>
 		<p>' . __("Use the form below to create multiple test users and blog in this WPMU system. Warning: this may take some time if you are creating a lot of data.") . '</p>
 		
-		<form action="wpmu-admin.php?page=demodata_form" method="post" class="demodata">
+		<form action="wpmu-admin.php?page=demodata_form&amp;create=users" method="post" class="demodata">
 		<fieldset>
 		
-			<legend>' . __("Users") . '</legend>
+			<h4>' . __("Users") . '</h4>
 			
 			<p><label for="users">' . __("Number of users (max 1000)") . '</label>
 			<input type="text" name="users" id="users" value="100" /></p>
 			
-			<p><label for="usernametemplate">' . __("User name template (with [x] for the number)") . '</label>
-			<input type="text" name="usernametemplate" id="usernametemplate" value="Demo user [x]" class="text" /></p>
-			
 			<p><label for="useremailtemplate">' . __("User email template (with [x] for the number)") . '</label>
 			<input type="text" name="useremailtemplate" id="useremailtemplate" value="demouser[x]@' . $current_site->domain . '" class="text" /></p>
+			
+			<p><label for="createusers">' . __("Create users") . '</label>
+			<input type="hidden" name="create" value="users" />
+			<input type="hidden" name="action" value="create" />
+			<button class="button" id="createusers">' . __("Create users") . '</button></p>
+			
+		</fieldset>
+		</form>
+		
+		<form action="wpmu-admin.php?page=demodata_form&amp;create=blogs" method="post" class="demodata">
+		<fieldset>
+		
+			<h4>' . __("Blogs") . '</h4>
+			
+			<p><label for="maxblogsperuser">' . __("Maximum number of blogs per user (max 5)") . '</label>
+			<input type="text" name="maxblogsperuser" id="maxblogsperuser" value="1" /></p>
 			
 			<p><label for="membershiptype1">' . __("All users must have at least one blog") . '</label>
 			<input type="radio" name="membershiptype" id="membershiptype1" value="1" checked="checked" /></p>
@@ -362,19 +1601,34 @@ function demodata_form()
 			<p><label for="membershiptype2">' . __("Users may have zero or more blogs") . '</label>
 			<input type="radio" name="membershiptype" id="membershiptype2" value="2" /></p>
 			
-			<p><label for="membershiptype3">' . __("Only create users, don't create blogs (the blog settings below will be ignored)") . '</label>
-			<input type="radio" name="membershiptype" id="membershiptype3" value="3" /></p>
+			<p><label for="createblogs">' . __("Create blogs") . '</label>
+			<input type="hidden" name="create" value="blogs" />
+			<input type="hidden" name="action" value="create" />
+			<button class="button" id="createblogs">' . __("Create blogs") . '</button></p>
 			
 		</fieldset>
+		</form>
+		
+		<form action="wpmu-admin.php?page=demodata_form&amp;create=categories" method="post" class="demodata">
 		<fieldset>
 		
-			<legend>' . __("Blogs") . '</legend>
+			<h4>' . __("Categories") . '</h4>
 			
-			<p><label for="maxblogsperuser">' . __("Maximum number of blogs per user (max 5)") . '</label>
-			<input type="text" name="maxblogsperuser" id="maxblogsperuser" value="3" /></p>
+			<p><label for="maxblogcategories">' . __("Maximum number of categories per blog (max 25)") . '</label>
+			<input type="text" name="maxblogcategories" id="maxblogcategories" value="10" /></p>
 			
-			<p><label for="blognametemplate">' . __("Blog name template (with [x] for the number)") . '</label>
-			<input type="text" name="blognametemplate" id="blognametemplate" value="Demo blog [x]" class="text" /></p>
+			<p><label for="createcategories">' . __("Create categories") . '</label>
+			<input type="hidden" name="create" value="categories" />
+			<input type="hidden" name="action" value="create" />
+			<button class="button" id="createcategories">' . __("Create categories") . '</button></p>
+			
+		</fieldset>
+		</form>
+		
+		<form action="wpmu-admin.php?page=demodata_form&amp;create=posts" method="post" class="demodata">
+		<fieldset>
+		
+			<h4>' . __("Posts") . '</h4>
 			
 			<p><label for="maxblogposts">' . __("Maximum number of posts per blog (max 100)") . '</label>
 			<input type="text" name="maxblogposts" id="maxblogposts" value="50" /></p>
@@ -382,35 +1636,216 @@ function demodata_form()
 			<p><label for="maxpostlength">' . __("Maximum number of blog post paragraphs (min 1, max 50)") . '</label>
 			<input type="text" name="maxpostlength" id="maxpostlength" value="10" /></p>
 			
+			<p><label for="createposts">' . __("Create posts") . '</label>
+			<input type="hidden" name="create" value="posts" />
+			<input type="hidden" name="action" value="create" />
+			<button class="button" id="createposts">' . __("Create posts") . '</button></p>
+			
+		</fieldset>
+		</form>
+		
+		<form action="wpmu-admin.php?page=demodata_form&amp;create=pages" method="post" class="demodata">
+		<fieldset>
+		
+			<h4>' . __("Pages") . '</h4>
+			
+			<p><label for="maxpages">' . __("Maximum number of pages per blog (max 50)") . '</label>
+			<input type="text" name="maxpages" id="maxpages" value="25" /></p>
+			
+			<p><label for="maxtoppages">' . __("Maximum number of top-level pages per blog (max 10)") . '</label>
+			<input type="text" name="maxtoppages" id="maxtoppages" value="5" /></p>
+			
+			<p><label for="maxpageslevels">' . __("Maximum number of level to nest pages (max 5)") . '</label>
+			<input type="text" name="maxpageslevels" id="maxpageslevels" value="3" /></p>
+			
+			<p><label for="maxpagelength">' . __("Maximum number of blog page paragraphs (min 1, max 50)") . '</label>
+			<input type="text" name="maxpagelength" id="maxpagelength" value="10" /></p>
+			
+			<p><label for="createpages">' . __("Create pages") . '</label>
+			<input type="hidden" name="create" value="pages" />
+			<input type="hidden" name="action" value="create" />
+			<button class="button" id="createpages">' . __("Create pages") . '</button></p>
+			
+		</fieldset>
+		</form>
+			
+		<form action="wpmu-admin.php?page=demodata_form&amp;create=comments" method="post" class="demodata">
+		<fieldset>
+		
+				<h4>' . __("Comments") . '</h4>
+			
+			<p><label for="maxcomments">' . __("Maximum number of comments per post (max 50)") . '</label>
+			<input type="text" name="maxcomments" id="maxcomments" value="10" /></p>
+			
+			<p><label for="createcomments">' . __("Create comments") . '</label>
+			<input type="hidden" name="create" value="comments" />
+			<input type="hidden" name="action" value="create" />
+			<button class="button" id="createcomments">' . __("Create comments") . '</button></p>
+			
+		</fieldset>
+		</form>
+			
+		<form action="wpmu-admin.php?page=demodata_form&amp;create=blogs" method="post" class="demodata">
+		<fieldset>
+		
+			<h4>' . __("Links") . '</h4>
+			
 			<p><label for="maxbloglinks">' . __("Maximum number of links in blogroll (max 100)") . '</label>
 			<input type="text" name="maxbloglinks" id="maxbloglinks" value="25" /></p>
 			
+			<p><label for="createlinks">' . __("Create links") . '</label>
+			<input type="hidden" name="create" value="links" />
+			<input type="hidden" name="action" value="create" />
+			<button class="button" id="createlinks">' . __("Create links") . '</button></p>
+			
 		</fieldset>
-
+		</form>
+		';
+		
+		// if Buddypress has been detected
+		if ($buddypress)
+		{
+		echo '	
+		
+		<form action="wpmu-admin.php?page=demodata_form&amp;create=groups" method="post" class="demodata">
 		<fieldset>
+		
+			<h4>' . __("BuddyPress Groups") . '</h4>
+			
+			<p><label for="maxgroups">' . __("Number of groups (maximum 500)") . '</label>
+			<input type="text" name="maxgroups" id="maxgroups" value="100" /></p>
+			
+			<p><label for="maxgroupmembership">' . __("Max. number of groups per user (maximum 50)") . '</label>
+			<input type="text" name="maxgroupmembership" id="maxgroupmembership" value="25" /></p>
+			
+			<p><label for="creategroups">' . __("Create groups") . '</label>
+			<input type="hidden" name="create" value="groups" />
+			<input type="hidden" name="action" value="create" />
+			<button class="button" id="creategroups">' . __("Create groups") . '</button></p>
+			
+		</fieldset>
+		</form>
+		
+		<!--
+		creating demo wire messages disabled as I can\'t get it to work
+		<form action="wpmu-admin.php?page=demodata_form&amp;create=wire" method="post" class="demodata">
+		<fieldset>
+		
+			<h4>' . __("BuddyPress Wire Messages") . '</h4>
+			
+			<p><label for="maxwire">' . __("Number of wire messages per user (maximum 50)") . '</label>
+			<input type="text" name="maxwire" id="maxwire" value="25" /></p>
+			
+			<p><label for="createwire">' . __("Create wire messages") . '</label>
+			<input type="hidden" name="create" value="wire" />
+			<input type="hidden" name="action" value="create" />
+			<button class="button" id="createwire">' . __("Create wire") . '</button></p>
+			
+		</fieldset>
+		</form>
+		-->
+		
+		<form action="wpmu-admin.php?page=demodata_form&amp;create=friends" method="post" class="demodata">
+		<fieldset>
+			
+			<h4>' . __("BuddyPress Friends") . '</h4>
+			
+			<p><label for="maxfriends">' . __("Number of friends per user (maximum 100)") . '</label>
+			<input type="text" name="maxfriends" id="maxfriends" value="50" /></p>
 		
 			<p>' . __("Creating this demo data may take several minutes. Please be patient, and only click the button below once.") . '</p>
 			
-			<p><label for="create">' . __("Create demo data") . '</label>
+			<p><label for="createfriends">' . __("Create friends") . '</label>
+			<input type="hidden" name="create" value="friends" />
 			<input type="hidden" name="action" value="create" />
-			<button class="button" name="create" id="create">' . __("Create") . '</button></p>
+			<button class="button" id="createfriends">' . __("Create friends") . '</button></p>
 		
 		</fieldset>
 		</form>
 		
+		';
+		}
+		
+		echo '		
+		<h3>Delete demo data</h3>
+		
 		<form action="wpmu-admin.php?page=demodata_form" method="post" class="demodata">
 		<fieldset>
 		
-			<p>Delete all data in your database except for information and tables for blog ID 1 and user ID 1.</p>
-		
+		';
+		if ($buddypress)
+		{
+			echo '
+			<p>Delete all user and blog data in your database except for information and tables for blog ID 1 and user ID 1. This will also delete all Buddypress groups and friend relationships.</p>
+			';
+		} else {
+			echo '
+			<p>Delete all user and blog data in your database except for information and tables for blog ID 1 and user ID 1.</p>
+			';
+		}
+		echo '
 			<p><label for="delete">Delete demo data</label>
 			<input type="hidden" name="action" value="delete" />
 			<button class="button" name="delete" id="delete">Delete</button></p>
 		
 		</fieldset>
 		</form>
+	';
+	
+	} else {
+	
+		echo '
+		<h2>' . __("populate_queries() function not found") . '</h2>
+		<p>' . __("Sorry, the function populate_queries() was not found. This function is required to use the Demo Data Creator plugin. See this Wordpress MU ticket for technical details: ") . '<a href="http://trac.mu.wordpress.org/ticket/394">http://trac.mu.wordpress.org/ticket/394</a>.</p>
+		';
+	
+	}
+	
+	echo '
 	</div>
 	';
+}
+
+// ======================================================
+// Content functions
+// ======================================================
+ 
+// return a random array of category ids
+function demodata_random_categories()
+{
+	$limit = rand(1, 6);
+	global $wpdb;
+	return $wpdb->get_col("select term_id from ".$wpdb->terms." order by rand() limit ".$limit.";");
+}
+
+// return a random contact first name
+function demodata_firstname()
+{
+	$firstnames = explode(",", "Alan,Albert,Allen,Amy,Andrew,Angela,Anita,Ann,Anne,Annette,Anthony,Arthur,Barbara,Barry,Beth,Betty,Beverly,Bill,Billy,Bobby,Bonnie,Bradley,Brenda,Brian,Bruce,Bryan,Carl,Carol,Carolyn,Catherine,Cathy,Charles,Cheryl,Chris,Christine,Christopher,Cindy,Connie,Craig,Curtis,Cynthia,Dale,Daniel,Danny,Darlene,Darryl,David,Dawn,Dean,Debbie,Deborah,Debra,Denise,Dennis,Diana,Diane,Donald,Donna,Dorothy,Douglas,Edward,Elizabeth,Ellen,Eric,Frank,Gail,Gary,George,Gerald,Glenn,Gloria,Greg,Gregory,Harold,Henry,Jack,Jacqueline,James,Jane,Janet,Janice,Jay,Jean,Jeff,Jeffery,Jeffrey,Jennifer,Jerry,Jill,Jim,Jimmy,Joan,Joanne,Joe,John,Johnny,Jon,Joseph,Joyce,Judith,Judy,Julie,Karen,Katharine,Kathleen,Kathryn,Kathy,Keith,Kelly,Kenneth,Kevin,Kim,Kimberly,Larry,Laura,Laurie,Lawrence,Leslie,Linda,Lisa,Lori,Lynn,Margaret,Maria,Mark,Martha,Martin,Mary,Matthew,Michael,Michele,Michelle,Mike,Nancy,Pamela,Patricia,Patrick,Paul,Paula,Peggy,Peter,Philip,Phillip,Ralph,Randall,Randy,Raymond,Rebecca,Renee,Rhonda,Richard,Rick,Ricky,Rita,Robert,Robin,Rodney,Roger,Ronald,Ronnie,Rose,Roy,Russell,Ruth,Samuel,Sandra,Scott,Sharon,Sheila,Sherry,Shirley,Stephanie,Stephen,Steve,Steven,Susan,Suzanne,Tammy,Teresa,Terri,Terry,Theresa,Thomas,Tim,Timothy,Tina,Todd,Tom,Tony,Tracy,Valerie,Vicki,Vickie,Vincent,Walter,Wanda,Wayne,Wendy,William,Willie");
+	return $firstnames[ array_rand( $firstnames, 1 ) ];
+}
+
+// return a random contact last name
+function demodata_lastname()
+{
+	$lastnames = explode(",", "Smith,Johnson,Williams,Jones,Brown,Davis,Miller,Wilson,Moore,Taylor,Anderson,Thomas,Jackson,White,Harris,Martin,Thompson,Garcia,Robinson,Clark,Lewis,Lee,Walker,Hall,Allen,Young,King,Wright,Lopez,Hill,Scott,Green,Adams,Baker,Nelson,Carter,Mitchell,Perez,Roberts,Turner,Phillips,Campbell,Parker,Evans,Edwards,Collins,Stewart,Morris,Rogers,Reed,Cook,Morgan,Bell,Murphy,Bailey,Rivera,Cooper,Richardson,Cox,Howard,Ward,Peterson,Gray,James,Watson,Brooks,Kelly,Sanders,Price,Bennett,Wood,Barnes,Ross,Henderson,Coleman,Jenkins,Perry,Powell,Long,Patterson,Hughes,Flores,Washington,Butler,Simmons,Foster,Bryant,Alexander,Russell,Griffin,Hayes,Myers,Ford,Hamilton,Graham,Sullivan,Wallace,Woods,Cole,West,Jordan,Owens,Reynolds,Fisher,Ellis,Harrison,Gibson,Mcdonald,Cruz,Marshall,Gomez,Murray,Freeman,Wells,Webb,Simpson,Stevens,Tucker,Porter,Hunter,Hicks,Crawford,Henry,Boyd,Mason,Morales,Kennedy,Warren,Dixon,Ramos,Reyes,Burns,Gordon,Shaw,Holmes,Rice,Robertson,Hunt,Black,Daniels,Palmer,Mills,Nichols,Grant,Knight,Ferguson,Rose,Stone,Hawkins,Dunn,Perkins,Hudson,Spencer,Gardner,Stephens,Payne,Pierce,Berry,Matthews,Arnold,Wagner,Willis,Ray,Watkins,Olson,Carroll,Duncan,Snyder,Hart,Cunningham,Bradley,Lane,Andrews,Ruiz,Harper,Fox,Riley,Armstrong,Carpenter,Weaver,Greene,Lawrence,Elliott,Chavez,Sims,Austin,Peters,Kelley,Franklin,Lawson,Fields,Ryan,Schmidt,Carr,Castillo,Wheeler,Chapman,Oliver,Montgomery,Richards,Williamson,Johnston,Banks,Meyer,Bishop,Mccoy,Howell,Morrison,Hansen,Garza,Harvey,Little,Burton,Stanley,Nguyen,George,Jacobs,Reid,Kim,Fuller,Lynch,Dean,Gilbert,Garrett,Welch,Larson,Frazier,Burke,Hanson,Day,Moreno,Bowman,Fowler");
+	return $lastnames[ array_rand( $lastnames, 1 ) ];
+}
+
+// return a random blog name
+function demodata_blogname()
+{
+	$names1 = explode(",", "View from,All about,Here is,About,Writings on,See my,Blog about,I love,Do you like,Unlimited,,,");
+	$names2 = explode(",", "Photos,Food,History,Music,Sport,Football,Rugby,Golf,Tennis,Cricket,Hockey,Jazz,Folk,Rock,Metal,Victoriana,Elizabethan,Stamp,Model,Flying Astronomy,Robotics,Bird watching,Calligraphy,Drawing,Dollhouses,Knitting,Antiques,Book,Animation,Gardening,Literature");
+	return $names1[ array_rand( $names1, 1 ) ] . ' ' . $names2[ array_rand( $names2, 1 ) ];
+}
+
+// return a random group name
+function demodata_groupname()
+{
+	$names1 = explode(",", "Photos,Food,History,Music,Sport,Football,Rugby,Golf,Tennis,Cricket,Hockey,Jazz,Folk,Rock,Metal,Victoriana,Elizabethan,Stamp,Model,Flying Astronomy,Robotics,Bird watching,Calligraphy,Drawing,Dollhouses,Knitting,Antiques,Book,Animation,Gardening,Literature");
+	$names2 = explode(",", "Professionals,Lovers,Heroes,Fans,Appreciators,Association,Society,Community,World,Group,Order,Gang,Guild,,,");
+	return $names1[ array_rand( $names1, 1 ) ] . ' ' . $names2[ array_rand( $names2, 1 ) ];
 }
 
 // generate random html content
@@ -519,7 +1954,7 @@ commodo consequat.</dd>
 }
 
 // generate random text content
-function demodata_generate_text($maxlength)
+function demodata_generate_random_text($maxlength, $randomstart = true)
 {
 	$len = rand(0, $maxlength);
 
@@ -553,7 +1988,16 @@ Vivamus turpis ante, ultrices scelerisque, elementum id, tempor at, quam. Cras e
 
 Duis imperdiet, mi eget euismod fermentum, odio nisl posuere quam, sit amet tristique urna diam at lacus. Duis congue lacus non ipsum. Donec felis tortor, lacinia at, rhoncus id, scelerisque ornare, nisi. Mauris felis ligula, pharetra vitae, posuere eget, tincidunt at, turpis. Donec eget ligula. Praesent fermentum dictum nisl. Phasellus enim. Nam placerat. Ut dignissim est nec lorem. Aliquam eros augue, rutrum et, placerat in, euismod in, libero. Morbi venenatis, eros non gravida rhoncus, leo metus venenatis augue, vitae dignissim lorem sapien eget diam. Ut nisl. Fusce quis lorem. Etiam mollis risus. Integer luctus. In quis quam. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas metus.';
 
-	$out = substr($str, 0, $len);
+	if (!$randomstart)
+	{
+
+		$out = trim(substr($str, 0, $len));
+	
+	} else {
+	
+		$out = trim(substr($str, rand(0 + $len, strlen($str) - $len), $len));
+	
+	}
 
 	return $out;
 }

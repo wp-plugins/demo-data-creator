@@ -3,28 +3,37 @@ Contributors: mrwiblog
 Donate link: http://www.stillbreathing.co.uk/donate/
 Tags: wordpress mu, demo, data, example, dummy, users, blogs, sample
 Requires at least: 2.7
-Tested up to: 2.7.1
-Stable tag: 0.1
+Tested up to: 2.8.4
+Stable tag: 0.2
 
 Demo Data Creator is a Wordpress MU plugin that allows a Wordpress developer to create demo users, blogs, posts, comments and blogroll links.
 
 == Description ==
 
-If you're a web geek like me and into developing Wordpress MU websites (like wibsite.com), it's useful to have a bit of demo data in your system while it’s being built. This allows you to check that lists of things are displaying as they should, and that themes are working when they get data in them.
+If you're a web geek like me and into developing Wordpress MU websites (like wibsite.com), it's useful to have a bit of demo data in your system while it's being built. This allows you to check that lists of things are displaying as they should, and that themes are working when they get data in them.
 
 Historically it's been a pain to add that data in. Either you need to take a backup of another site and use that data, or you need to tediously create multiple users and blogs yourself. No more, not now my Demo Data Creator is in town!
 
 This Wordpress MU plugin gives you a new admin screen where you can enter some parameters, click a button and (after a short wait) random demo data will be created. The parameter options include:
 
     * The number of users
-    * Whether you want just user, or users and blogs
+    * Whether you want just users, or users and blogs
     * Maximum number of blogs per user
+	* Maximum number of categories per blog
     * Maximum number of posts per blog
-    * Maximum number of blog post paragraphs
+	* Maximum number of blog post paragraphs
+	* Maximum number of pages per blog
+	* Whether you want nested pages
     * Maximum number of comments per post
     * Maximum number of links in blogroll
+	
+For BuddyPress you also have:
 
-Post content and comment text is automatically generated from Lorem ipsum text, for post content it's even HTML-formatted. You can also set a template for what you want the blog URLs to be, for example demoblog-1.mysite.com.
+	* Maximum number of groups
+	* Maximum number of members per group
+	* Maximum number of friends per user
+
+Post content and comment text is automatically generated from Lorem ipsum text, for post content it's even HTML-formatted.
 
 == Installation ==
 
@@ -36,10 +45,16 @@ The plugin should be placed in your /wp-content/mu-plugins/ directory (*not* /wp
 
 To scratch my own itch when developing [BeatsBase.com](http://beatsbase.com "Free mix hosting for DJs"). Hopefully this plugin helps other developers too.
 
-= Are you planning to support BuddyPress =
+= What about BuddyPress support =
 
-Yes, but I'm not sure when I'll have time to develop that section of the plugin.
+The DemoData plugin now supports BuddyPress.
 
 == Screenshots ==
 
 1. The demo data admin page
+
+== Changelog ==
+
+0.2 Added categories, pages for normal Wordpress MU sites. Added BuddyPress groups, group members and user friends BuddyPress-enabled sites.
+
+0.1 Initial version added to Wordpress plugin repository
