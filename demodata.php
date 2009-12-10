@@ -3,7 +3,7 @@
 Plugin Name: Wordpress MU Demo Data Creator
 Plugin URI: http://www.stillbreathing.co.uk/projects/demodata/
 Description: Demo Data Creator is a Wordpress MU and BuddyPress plugin that allows a Wordpress developer to create demo users, blogs, posts, comments and blogroll links for a Wordpress MU site. For BuddyPress you can also create user friendships, user statuses, user wire posts, groups, group members and group wire posts.
-Version: 0.5
+Version: 0.6
 Author: Chris Taylor
 Author URI: http://www.stillbreathing.co.uk
 */
@@ -1370,34 +1370,45 @@ function demodata_create_page($blogdomain, $parentid, $maxpagelength, $pagex)
 // create a blog (taken from /wp-admin/wpmu-edit.php)
 function demodata_create_blog($newid, $blogdomain, $blogname, $user_id)
 {
-	global $current_site;
-	global $current_user;
-	global $wpdb;
-	
-	$base = "/";
-	
-	if( constant('VHOST') == 'yes' ) {
-		$newdomain = $blogdomain.".".$current_site->domain;
-		$path = $base;
-	} else {
-		$newdomain = $current_site->domain;
-		$path = $base.$blogdomain.'/';
-	}
-	
-	// install this blog
-	$meta = apply_filters('signup_create_blog_meta', array ('lang_id' => 1, 'public' => 1));
-	$id = wpmu_create_blog($newdomain, $path, $blogname, $user_id , $meta, $current_site->id);
+	if ($newid > 1)
+	{
+		global $current_site;
+		global $current_user;
+		global $wpdb;
+		global $wp_queries;
+		
+		//require_once( ABSPATH . 'wp-admin/includes/upgrade.php');
+		
+		$wp_queries = str_replace($wpdb->base_prefix . "1_", $wpdb->base_prefix . $newid . "_", $wp_queries);
+		$wp_queries = str_replace($wpdb->base_prefix . ($newid - 1) . "_", $wpdb->base_prefix . $newid . "_", $wp_queries);
+		
+		$base = "/";
+		
+		if( constant('VHOST') == 'yes' ) {
+			$newdomain = $blogdomain.".".$current_site->domain;
+			$path = $base;
+		} else {
+			$newdomain = $current_site->domain;
+			$path = $base.$blogdomain.'/';
+		}
+		
+		// install this blog
+		$meta = apply_filters('signup_create_blog_meta', array ('lang_id' => 1, 'public' => 1));
+		$id = wpmu_create_blog($newdomain, $path, $blogname, $user_id , $meta, $current_site->id);
 
-	if( !is_wp_error($id) ) {
-		if( get_user_option( $user_id, 'primary_blog' ) == 1 )
-			update_user_option( $user_id, 'primary_blog', $id, true );
-			
-		// add the user to the blog
-		add_user_to_blog($id, $user_id, 'administrator');
-			
-		return $id;
+		if( !is_wp_error($id) ) {
+			if( get_user_option( $user_id, 'primary_blog' ) == 1 )
+				update_user_option( $user_id, 'primary_blog', $id, true );
+				
+			// add the user to the blog
+			add_user_to_blog($id, $user_id, 'administrator');
+				
+			return $id;
+		} else {
+			return false;
+		}
 	} else {
-		return false;
+		return true;
 	}
 }
 
