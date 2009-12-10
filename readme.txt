@@ -1,7 +1,7 @@
 === Wordpress MU Demo Data Creator ===
 Contributors: mrwiblog
 Donate link: http://www.stillbreathing.co.uk/donate/
-Tags: wordpress mu, demo, data, example, dummy, users, blogs, sample
+Tags: wordpress mu, buddypress, demo, data, example, dummy, users, blogs, sample
 Requires at least: 2.7
 Tested up to: 2.8.4
 Stable tag: 0.6
