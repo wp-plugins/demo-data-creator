@@ -10,6 +10,8 @@ Demo Data Creator is a Wordpress MU and BuddyPress plugin that allows a Wordpres
 
 == Description ==
 
+Warning: some parts of this plugin are not compatible with BuddyPress 1.2. I am working on a fix.
+
 If you develop Wordpress MU websites it's useful to have some demo data in your system while it's being built. This allows you to check that lists of things are displaying as they should, and that themes are working when they get data in them.
 
 Historically it's been a pain to add that data in. Either you need to take a backup of another site and use that data, or you need to tediously create multiple users and blogs yourself. No more, not now my Demo Data Creator is in town!
