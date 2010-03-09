@@ -3,19 +3,18 @@
 Plugin Name: Wordpress MU Demo Data Creator
 Plugin URI: http://www.stillbreathing.co.uk/projects/demodata/
 Description: Demo Data Creator is a Wordpress MU and BuddyPress plugin that allows a Wordpress developer to create demo users, blogs, posts, comments and blogroll links for a Wordpress MU site. For BuddyPress you can also create user friendships, user statuses, user wire posts, groups, group members and group wire posts.
-Version: 0.7
+Version: 0.8
 Author: Chris Taylor
 Author URI: http://www.stillbreathing.co.uk
 */
 
-// if the file is being called outside of Wordpress
-if (!function_exists('add_action'))
+// if the file is being called in an AJAX call
+if ( isset($_GET['ajax']) && $_GET['ajax'] == "true" )
 {
-	// include Wordpress
-	require($_SERVER['DOCUMENT_ROOT'] . '/wp-blog-header.php');
 
-	// listen for form submission
-	demodata_watch_form();
+	// when the admin menu is built
+	add_action('admin_menu', 'demodata_do_ajax');
+	
 }
 
 // when the admin menu is built
@@ -25,12 +24,34 @@ add_action('admin_menu', 'demodata_add_menu_items');
 // Admin functions
 // ======================================================
 
+// do an ajax request
+function demodata_do_ajax()
+{
+
+	echo '
+	<div id="demodata_results">
+	';
+
+	// listen for form submission
+	demodata_watch_form();
+	
+	echo '
+	</div>
+	';
+	
+	// stop processing
+	exit();
+}
+
 // create the data
 function demodata_create()
 {
 	// listen for a form submission
 	if (count($_POST) > 0 && isset($_POST["create"]))
 	{
+	
+		// get the upgrade functions
+		require_once( ABSPATH . 'wp-admin/includes/upgrade.php');
 	
 		switch ($_POST["create"]) {
 		
@@ -100,6 +121,7 @@ function demodata_add_menu_items()
 	if (is_site_admin())
 	{
 		add_action("admin_head", "demodata_css");
+		add_action("admin_head", "demodata_js");
 		add_submenu_page('wpmu-admin.php', 'Demo Data Creator', 'Demo Data Creator', 10, 'demodata_form', 'demodata_form');
 	}
 }
@@ -131,6 +153,12 @@ function demodata_css()
 		background: #D2FFCF;
 		border: 1px solid #188F11;
 		}
+		html body div.demodatapending {
+		padding: 0 1em 1em 1em;
+		margin-top: 1em;
+		background: #FFE8BF;
+		border: 1px solid #FFB93F;
+		}
 		html body div.demodataerror {
 		padding: 0 1em 1em 1em;
 		margin-top: 1em;
@@ -138,6 +166,40 @@ function demodata_css()
 		border: 1px solid #BF0B0B;
 		}
 		</style>
+		';
+	}
+}
+
+// add the JavaScript to the admin page head
+function demodata_js()
+{
+	if (isset($_GET["page"]) && $_GET["page"] == "demodata_form")
+	{
+		echo '
+		<script type="text/javascript">
+		jQuery(document).ready(function(){
+			jQuery(".demodatabutton").bind("click", function(e) {
+				var id = jQuery(this).attr("id");
+				var div = jQuery("#" + id + "output");
+				var form = jQuery("#" + id + "form");
+				div.html(\'<div class="demodatapending"><p>' . __("Processing ... please wait", "demodata") . '</div></p>\');
+				var formdata = form.serialize();
+				jQuery.ajax({
+					data: formdata,
+					type: "POST",
+					url: "wpmu-admin.php?page=demodata_form&ajax=true",
+					success: function(data) {
+						div.html(data);
+					},
+					error: function() {
+						div.html(\'<div class="demodataerror"><p>' . __("Sorry, the process failed", "demodata") . '</p></div>\');
+					}
+				});
+				e.preventDefault();
+				return false;
+			});
+		});
+		</script>
 		';
 	}
 }
@@ -171,6 +233,7 @@ function demodata_create_statuses()
 
 		$success = true;
 		$statusx = 0;
+		$errorx = 0;
 		
 		// loop users
 		foreach ($users as $user)
@@ -189,6 +252,7 @@ function demodata_create_statuses()
 					$success = false;
 					$error .= "<li>Error creating status " . $statusx . " for user ID " . $user->id . '</li>';
 					$statusx--;
+					$errorx++;
 					// break out of this loop
 					break;
 				} else {
@@ -205,7 +269,6 @@ function demodata_create_statuses()
 			echo '
 			<div class="demodatasuccess">
 			<p>' . $statusx . " " . __("demo statuses created", "demodata") . '</p>
-			<p><a href="http://' . $current_site->domain . '">' . __("Your system is now ready for testing here.", "demodata") . '</a></p>
 			</div>
 			';
 			
@@ -218,7 +281,6 @@ function demodata_create_statuses()
 			<ul>
 			' . $error . '
 			</ul>
-			<p><a href="http://' . $current_site->domain . '">' . __("You can test this data in your system here.", "demodata") . '</a></p>
 			</div>
 			';
 			
@@ -317,7 +379,6 @@ function demodata_create_users()
 			echo '
 			<div class="demodatasuccess">
 			<p>' . $userx . " " . __("demo users created", "demodata") . '</p>
-			<p><a href="http://' . $current_site->domain . '">' . __("Your system is now ready for testing here.", "demodata") . '</a></p>
 			</div>
 			';
 			
@@ -330,7 +391,6 @@ function demodata_create_users()
 			<ul>
 			' . $error . '
 			</ul>
-			<p><a href="http://' . $current_site->domain . '">' . __("You can test this data in your system here.", "demodata") . '</a></p>
 			</div>
 			';
 			
@@ -353,12 +413,14 @@ function demodata_create_blogs()
 	global $current_site;
 	
 	// get the blog settings
+	$bloguserstoprocess = @$_POST["bloguserstoprocess"] == "" ? 1 : (int)$_POST["bloguserstoprocess"];
 	$membershiptype = @$_POST["membershiptype"] == "" ? 1 : (int)$_POST["membershiptype"];
 	$maxblogsperuser = @$_POST["maxblogsperuser"] == "" ? 1 : (int)$_POST["maxblogsperuser"];
 	$maxblogsperuser = $maxblogsperuser > 5 ? $maxblogsperuser = 5 : $maxblogsperuser = $maxblogsperuser;
 	
 	// check all the settings
 	if (
+		$bloguserstoprocess != "" &&
 		$membershiptype != "" && 
 		$maxblogsperuser != ""
 	)
@@ -378,6 +440,8 @@ function demodata_create_blogs()
 	
 		$success = true;
 		$blogx = 0;
+		$usersx = 0;
+		$userids = "";
 				
 		// set the minimum number of blogs
 		if ($membershiptype == 1)
@@ -388,38 +452,60 @@ function demodata_create_blogs()
 		}
 		
 		// get users
-		$sql = "select id from " . $wpdb->users . ";";
+		$sql = "select id from " . $wpdb->users . " where id > 0;";
 		$users = $wpdb->get_results($sql);
+		
+		// get highest blog id
+		$sql = "select max(blog_id) from " . $wpdb->blogs . ";";
+		$blogid = (int)$wpdb->get_var($sql) + 1;
 
 		// loop users
 		foreach($users as $user)
 		{
 		
-			// get a random number of blogs
-			$blogs = rand($minblogs, $maxblogsperuser);
-			
-			// loop the number of required blogs
-			for($b = 0; $b < $blogs; $b++)
-			{
-			
-				$blogx++;
-				
-				// get a random blogname
-				$blogname = demodata_blogname();
-				$blogdomain = "demoblog" . $blogx;
+			// get the current blogs for this user
+			$userblogs = get_blogs_of_user($user->id);
 
-				// check the blog can be created
-				if (!demodata_create_blog($blogx, $blogdomain, $blogname, $user->id))
+			// if the user has no blogs, or is just a member of the main blog
+			if (count($userblogs) == 0 || (count($userblogs) == 1 && $userblogs[1]->userblog_id == "1"))
+			{
+		
+				// get a random number of blogs
+				$blogs = rand($minblogs, $maxblogsperuser);
+				
+				// loop the number of required blogs
+				for($b = 0; $b < $blogs; $b++)
 				{
-					$success = false;
-					$error .= "<li>Error creating blog " . $blogx . '</li>';
-					$blogx--;
-					// break out of this loop
-					break;
+				
+					$blogx++;
+					
+					// get a random blogname
+					$blogname = demodata_blogname();
+					$blogdomain = "demoblog" . $blogid;
+
+					// check the blog can be created
+					if (!demodata_create_blog($blogid, $blogdomain, $blogname, $user->id))
+					{
+						$success = false;
+						$error .= "<li>Error creating blog " . $blogid . '</li>';
+						$blogx--;
+						// break out of this loop
+						break;
+					}
+					
+					$blogid++;
+					
 				}
 				
+				$userids .= $user->id . ", ";
+				
+				$usersx++;
+				
+				if ($bloguserstoprocess == $usersx)
+				{
+					break;
+				}
 			}
-			
 		}
 		
 		// turn registration notification back on
@@ -431,7 +517,7 @@ function demodata_create_blogs()
 			echo '
 			<div class="demodatasuccess">
 			<p>' . $blogx . " " . __("demo blogs created", "demodata") . '</p>
-			<p><a href="http://' . $current_site->domain . '">' . __("Your system is now ready for testing here.", "demodata") . '</a></p>
+			<p>' . __("Blogs created for User IDs:", "demodata") . " " . trim(trim($userids), ",") . '</p>
 			</div>
 			';
 			
@@ -444,7 +530,6 @@ function demodata_create_blogs()
 			<ul>
 			' . $error . '
 			</ul>
-			<p><a href="http://' . $current_site->domain . '">' . __("You can test this data in your system here.", "demodata") . '</a></p>
 			</div>
 			';
 			
@@ -511,7 +596,7 @@ function demodata_create_categories()
 				if (!demodata_create_category($blog->domain, $categoryx))
 				{
 					$categoryx--;
-				}			
+				}				
 			}
 			
 			// switch back to the main blog
@@ -521,7 +606,6 @@ function demodata_create_categories()
 		echo '
 		<div class="demodatasuccess">
 		<p>' . $categoryx . " " . __("demo categories created", "demodata") . '</p>
-		<p><a href="http://' . $current_site->domain . '">' . __("Your system is now ready for testing here.", "demodata") . '</a></p>
 		</div>
 		';
 
@@ -590,7 +674,7 @@ function demodata_create_posts()
 				if (!demodata_create_post($blog->domain, $maxpostlength, $postx))
 				{
 					$postx--;
-				}			
+				}				
 			}
 			
 			// switch back to the main blog
@@ -600,7 +684,6 @@ function demodata_create_posts()
 		echo '
 		<div class="demodatasuccess">
 		<p>' . $postx . " " . __("demo posts created", "demodata") . '</p>
-		<p><a href="http://' . $current_site->domain . '">' . __("Your system is now ready for testing here.", "demodata") . '</a></p>
 		</div>
 		';
 
@@ -727,7 +810,6 @@ function demodata_create_pages()
 		echo '
 		<div class="demodatasuccess">
 		<p>' . $pagex . " " . __("demo pages created", "demodata") . '</p>
-		<p><a href="http://' . $current_site->domain . '">' . __("Your system is now ready for testing here.", "demodata") . '</a></p>
 		</div>
 		';
 	
@@ -812,7 +894,6 @@ function demodata_create_comments()
 		echo '
 		<div class="demodatasuccess">
 		<p>' . $commentx . ' ' . __("demo comments created", "demodata") . '</p>
-		<p><a href="http://' . $current_site->domain . '">' . __("Your system is now ready for testing here.", "demodata") . '</a></p>
 		</div>
 		';
 
@@ -885,7 +966,6 @@ function demodata_create_links()
 		echo '
 		<div class="demodatasuccess">
 		<p>' . $linkx . " " . __("demo links created", "demodata") . '</p>
-		<p><a href="http://' . $current_site->domain . '">' . __("Your system is now ready for testing here.", "demodata") . '</a></p>
 		</div>
 		';
 
@@ -917,8 +997,10 @@ function demodata_create_groups()
 		$maxgroups = $maxgroups > 500 ? $maxgroups = 500 : $maxgroups = $maxgroups;
 		$maxgroupmembership = @$_POST["maxgroupmembership"] == "" ? 25 : (int)$_POST["maxgroupmembership"];
 		$maxgroupmembership = $maxgroupmembership > 50 ? $maxgroupmembership = 50 : $maxgroupmembership = $maxgroupmembership;
-		$maxgroupwire = @$_POST["maxgroupwire"] == "" ? 10 : (int)$_POST["maxgroupwire"];
-		$maxgroupwire = $maxgroupwire > 25 ? $maxgroupwire = 25 : $maxgroupwire = $maxgroupwire;
+		if ( function_exists( "groups_new_wire_post" ) ) {
+			$maxgroupwire = @$_POST["maxgroupwire"] == "" ? 10 : (int)$_POST["maxgroupwire"];
+			$maxgroupwire = $maxgroupwire > 25 ? $maxgroupwire = 25 : $maxgroupwire = $maxgroupwire;
+		}
 		
 		// check all the settings
 		if (
@@ -1004,20 +1086,22 @@ function demodata_create_groups()
 					
 					$current_id = $bp->loggedin_user->id;
 					
-					// loop the number of required group wire messages for this group
-					for($w = 0; $w < $maxgroupwire; $w++)
-					{		
-				
-						$postsx++;
-						
-						// if the member could not be saved
-						if ( !demodata_create_group_wire_message( $newgroupid ) )
-						{
-							$success = false;
-							$error .= "<li>Error creating group wire post for group ID " . $newgroupid . '</li>';
-							$postsx--;
-							// break out of this loop
-							break;
+					if ( function_exists( "groups_new_wire_post" ) ) {
+						// loop the number of required group wire messages for this group
+						for($w = 0; $w < $maxgroupwire; $w++)
+						{		
+					
+							$postsx++;
+							
+							// if the member could not be saved
+							if ( !demodata_create_group_wire_message( $newgroupid ) )
+							{
+								$success = false;
+								$error .= "<li>Error creating group wire post for group ID " . $newgroupid . '</li>';
+								$postsx--;
+								// break out of this loop
+								break;
+							}
 						}
 					}
 					
@@ -1033,7 +1117,6 @@ function demodata_create_groups()
 				<p>' . $groupx . " " . __("demo groups created", "demodata") . '</p>
 				<p>' . $memberx . ' ' . __("demo group members created", "demodata") . '</p>
 				<p>' . $postsx . ' ' . __("demo group wire posts created", "demodata") . '</p>
-				<p><a href="http://' . $current_site->domain . '">' . __("Your system is now ready for testing here.", "demodata") . '</a></p>
 				</div>
 				';
 				
@@ -1048,7 +1131,6 @@ function demodata_create_groups()
 				<ul>
 				' . $error . '
 				</ul>
-				<p><a href="http://' . $current_site->domain . '">' . __("You can test this data in your system here.", "demodata") . '</a></p>
 				</div>
 				';
 				
@@ -1142,7 +1224,6 @@ function demodata_create_friends()
 				echo '
 				<div class="demodatasuccess">
 				<p>' . $friendx . " " . __("demo friendships created", "demodata") . '</p>
-				<p><a href="http://' . $current_site->domain . '">' . __("Your system is now ready for testing here.", "demodata") . '</a></p>
 				</div>
 				';
 				
@@ -1155,7 +1236,6 @@ function demodata_create_friends()
 				<ul>
 				' . $error . '
 				</ul>
-				<p><a href="http://' . $current_site->domain . '">' . __("You can test this data in your system here.", "demodata") . '</a></p>
 				</div>
 				';
 				
@@ -1186,85 +1266,86 @@ function demodata_create_wire()
 	// detect BuddyPress
 	$buddypress = defined( 'BP_ROOT_BLOG' );
 	
-	if ($buddypress)
-	{
+	if ( function_exists( "bp_wire_new_post" ) ) {
+		if ($buddypress)
+		{
 
-		global $wpdb;
-		global $current_site;
-		
-		// get wire settings
-		$maxwire = @$_POST["maxwire"] == "" ? 25 : (int)$_POST["maxwire"];
-		$maxwire = $maxwire > 50 ? $maxwire = 50 : $maxwire = $maxwire;
-		
-		// check all the settings
-		if (
-			$maxwire != ""
-		)
-		{
-			$go = true;
-		} else {
-			$go = false;
-		}
-		
-		// if the settings are OK
-		if ($go)
-		{
-		
-			$wirex = 0;
+			global $wpdb;
+			global $current_site;
 			
-			// get users
-			$sql = "select id from " . $wpdb->users . " order by id;";
-			$users = $wpdb->get_results($sql);
+			// get wire settings
+			$maxwire = @$_POST["maxwire"] == "" ? 25 : (int)$_POST["maxwire"];
+			$maxwire = $maxwire > 50 ? $maxwire = 50 : $maxwire = $maxwire;
 			
-			$current_id = $bp->loggedin_user->id;
-			
-			// loop users
-			foreach ($users as $user)
+			// check all the settings
+			if (
+				$maxwire != ""
+			)
 			{
-			
-				// get a random number of wire messages
-				$wires = rand(0, $maxwire);
-				
-				// loop the number of required wires
-				for($w = 0; $w < $wires; $w++)
-				{
-					$wirex++;
-					// see if the wire can be created
-					if (!demodata_create_wire_message($user->id))
-					{
-						// continue
-						$wirex--;
-					}
-				}
-				
+				$go = true;
+			} else {
+				$go = false;
 			}
 			
-			$bp->loggedin_user->id = $current_id;
+			// if the settings are OK
+			if ($go)
+			{
+			
+				$wirex = 0;
+				
+				// get users
+				$sql = "select id from " . $wpdb->users . " order by id;";
+				$users = $wpdb->get_results($sql);
+				
+				$current_id = $bp->loggedin_user->id;
+				
+				// loop users
+				foreach ($users as $user)
+				{
+				
+					// get a random number of wire messages
+					$wires = rand(0, $maxwire);
+					
+					// loop the number of required wires
+					for($w = 0; $w < $wires; $w++)
+					{
+						$wirex++;
+						// see if the wire can be created
+						if (!demodata_create_wire_message($user->id))
+						{
+							// continue
+							$wirex--;
+						}
+					}
+					
+				}
+				
+				$bp->loggedin_user->id = $current_id;
+				
+				echo '
+				<div class="demodatasuccess">
+				<p>' . $wirex . " " . __("demo wire messages created", "demodata") . '</p>
+				</div>
+				';
+
+			} else {
+			
+				echo '
+				<div class="demodataerror">
+				<p>' . __("Some of your settings were not valid. Please check all the settings below.", "demodata") . '</p>
+				</div>
+				';
+			
+			}
+		} else {
 			
 			echo '
-			<div class="demodatasuccess">
-			<p>' . $wirex . " " . __("demo wire messages created", "demodata") . '</p>
-			<p><a href="http://' . $current_site->domain . '">' . __("Your system is now ready for testing here.", "demodata") . '</a></p>
-			</div>
-			';
-
-		} else {
-		
-			echo '
 			<div class="demodataerror">
-			<p>' . __("Some of your settings were not valid. Please check all the settings below.", "demodata") . '</p>
+			<p>' . __("BuddyPress not found.", "demodata") . '</p>
 			</div>
 			';
 		
 		}
-	} else {
-		
-		echo '
-		<div class="demodataerror">
-		<p>' . __("BuddyPress not found.", "demodata") . '</p>
-		</div>
-		';
-	
 	}
 }
 
@@ -1419,25 +1500,45 @@ function demodata_create_blog($newid, $blogdomain, $blogname, $user_id)
 // create a wire message
 function demodata_create_wire_message($userid)
 {
-	global $wpdb, $bp;
+	global $bp;
 	
 	$message = demodata_generate_random_text(100);
 	
 	$bp->loggedin_user->id = demodata_random_user_id();
 	
-	return bp_wire_new_post( $userid, $message, "profile" );
+	if ( function_exists( "bp_wire_new_post" ) ) {
+		return bp_wire_new_post( $userid, $message, "profile" );
+	} else {
+		return bp_activity_add( array(
+			"action"=>"New Demo Profile Wire Message",
+			"content"=>$message,
+			"component"=>$bp->profile->id,
+			"type"=>"activity_update",
+			"item_id"=>$userid
+		) );
+	}
 }
 
 // create a group wire message
 function demodata_create_group_wire_message($groupid)
 {
-	global $wpdb, $bp;
+	global $bp;
 	
 	$message = demodata_generate_random_text(100);
 	
 	$bp->loggedin_user->id = demodata_random_user_id();
 	
-	return groups_new_wire_post( $groupid, $message );
+	if ( function_exists( "groups_new_wire_post" ) ) {
+		return groups_new_wire_post( $groupid, $message );
+	} else {
+		return bp_activity_add( array(
+			"action"=>"New Demo Group Wire Message",
+			"content"=>$message,
+			"component"=>$bp->groups->id,
+			"type"=>"activity_update",
+			"item_id"=>$groupid
+		) );
+	}
 }
 
 // create a BuddyPress group
@@ -1483,13 +1584,25 @@ function demodata_create_friendship($userid)
 // create a BuddyPress status update
 function demodata_create_status($userid)
 {
+	global $bp;
+
 	// get random status text
 	$content = demodata_generate_random_text(140);
 
 	// generate a random time between 1 year ago and now
 	$time = rand(time() - (60 * 60 * 24 * 365), time());
 
-	return bp_status_add_status( $userid, $content, $time );
+	if ( function_exists( "bp_status_add_status" ) ) {
+		return bp_status_add_status( $userid, $content, $time );
+	} else {
+		return bp_activity_add( array(
+			"action"=>"New Demo User Status",
+			"content"=>$content,
+			"component"=>$bp->profile->id,
+			"type"=>"profile_updated",
+			"item_id"=>$userid
+		) );
+	}
 }
 
 // ======================================================
@@ -1668,12 +1781,20 @@ function demodata_watch_form()
 		if ($_POST["action"] == "create")
 		{
 			demodata_create();
+		} else {
+			echo '
+			<!-- No POST action of "CREATE" -->
+			';
 		}
 		
 		if ($_POST["action"] == "delete")
 		{
 			demodata_delete();
 		}
+	} else {
+		echo '
+		<!-- No POST action -->
+		';
 	}
 }
 
@@ -1686,9 +1807,6 @@ function demodata_form()
 {
 	global $current_site;
 	global $wpdb;
-
-	// get the upgrade functions
-	require_once( ABSPATH . 'wp-admin/includes/upgrade.php');
 
 	// detect BuddyPress
 	$buddypress = defined( 'BP_ROOT_BLOG' );
@@ -1706,7 +1824,7 @@ function demodata_form()
 		<h2>' . __("Create demo data", "demodata") . '</h2>
 		<p>' . __("Use the form below to create multiple test users and blog in this WPMU system. Warning: this may take some time if you are creating a lot of data.", "demodata") . '</p>
 		
-		<form action="wpmu-admin.php?page=demodata_form&amp;create=users" method="post" class="demodata">
+		<form action="wpmu-admin.php?page=demodata_form&amp;create=users" method="post" class="demodata" id="createusersform">
 		<fieldset>
 		
 			<h4>' . __("Users", "demodata") . '</h4>
@@ -1720,15 +1838,22 @@ function demodata_form()
 			<p><label for="createusers">' . __("Create users", "demodata") . '</label>
 			<input type="hidden" name="create" value="users" />
 			<input type="hidden" name="action" value="create" />
-			<button type="submit" class="button" id="createusers">' . __("Create users", "demodata") . '</button></p>
+			<button type="submit" class="button demodatabutton" id="createusers">' . __("Create users", "demodata") . '</button></p>
 			
 		</fieldset>
 		</form>
 		
-		<form action="wpmu-admin.php?page=demodata_form&amp;create=blogs" method="post" class="demodata">
+		<div id="createusersoutput"></div>
+		
+		<form action="wpmu-admin.php?page=demodata_form&amp;create=blogs" method="post" class="demodata" id="createblogsform">
 		<fieldset>
 		
 			<h4>' . __("Blogs", "demodata") . '</h4>
+			
+			<p>' . __("Adding blogs takes a lot of processing and is prone to errors. This function will not add any blogs for users who already have blogs, so I recommend you add blogs in batches of ten using the 'Number of users to process' option below. Running this function repeatedly will create blogs for the next ten users in the system who do not have any blogs yet.", "demodata") . '</p>
+			
+			<p><label for="bloguserstoprocess">' . __("Number of users to process", "demodata") . '</label>
+			<input type="text" name="bloguserstoprocess" id="bloguserstoprocess" value="10" /></p>
 			
 			<p><label for="maxblogsperuser">' . __("Maximum number of blogs per user (max 5)", "demodata") . '</label>
 			<input type="text" name="maxblogsperuser" id="maxblogsperuser" value="1" /></p>
@@ -1742,12 +1867,14 @@ function demodata_form()
 			<p><label for="createblogs">' . __("Create blogs", "demodata") . '</label>
 			<input type="hidden" name="create" value="blogs" />
 			<input type="hidden" name="action" value="create" />
-			<button type="submit" class="button" id="createblogs">' . __("Create blogs", "demodata") . '</button></p>
+			<button type="submit" class="button demodatabutton" id="createblogs">' . __("Create blogs", "demodata") . '</button></p>
 			
 		</fieldset>
 		</form>
 		
-		<form action="wpmu-admin.php?page=demodata_form&amp;create=categories" method="post" class="demodata">
+		<div id="createblogsoutput"></div>
+		
+		<form action="wpmu-admin.php?page=demodata_form&amp;create=categories" method="post" class="demodata" id="createcategoriesform">
 		<fieldset>
 		
 			<h4>' . __("Categories", "demodata") . '</h4>
@@ -1758,12 +1885,14 @@ function demodata_form()
 			<p><label for="createcategories">' . __("Create categories", "demodata") . '</label>
 			<input type="hidden" name="create" value="categories" />
 			<input type="hidden" name="action" value="create" />
-			<button type="submit" class="button" id="createcategories">' . __("Create categories", "demodata") . '</button></p>
+			<button type="submit" class="button demodatabutton" id="createcategories">' . __("Create categories", "demodata") . '</button></p>
 			
 		</fieldset>
 		</form>
 		
-		<form action="wpmu-admin.php?page=demodata_form&amp;create=posts" method="post" class="demodata">
+		<div id="createcategoriesoutput"></div>
+		
+		<form action="wpmu-admin.php?page=demodata_form&amp;create=posts" method="post" class="demodata" id="createpostsform">
 		<fieldset>
 		
 			<h4>' . __("Posts", "demodata") . '</h4>
@@ -1777,12 +1906,14 @@ function demodata_form()
 			<p><label for="createposts">' . __("Create posts", "demodata") . '</label>
 			<input type="hidden" name="create" value="posts" />
 			<input type="hidden" name="action" value="create" />
-			<button type="submit" class="button" id="createposts">' . __("Create posts", "demodata") . '</button></p>
+			<button type="submit" class="button demodatabutton" id="createposts">' . __("Create posts", "demodata") . '</button></p>
 			
 		</fieldset>
 		</form>
 		
-		<form action="wpmu-admin.php?page=demodata_form&amp;create=pages" method="post" class="demodata">
+		<div id="createpostsoutput"></div>
+		
+		<form action="wpmu-admin.php?page=demodata_form&amp;create=pages" method="post" class="demodata" id="createpagesform">
 		<fieldset>
 		
 			<h4>' . __("Pages", "demodata") . '</h4>
@@ -1802,12 +1933,14 @@ function demodata_form()
 			<p><label for="createpages">' . __("Create pages", "demodata") . '</label>
 			<input type="hidden" name="create" value="pages" />
 			<input type="hidden" name="action" value="create" />
-			<button type="submit" class="button" id="createpages">' . __("Create pages", "demodata") . '</button></p>
+			<button type="submit" class="button demodatabutton" id="createpages">' . __("Create pages", "demodata") . '</button></p>
 			
 		</fieldset>
 		</form>
+		
+		<div id="createpagesoutput"></div>
 			
-		<form action="wpmu-admin.php?page=demodata_form&amp;create=comments" method="post" class="demodata">
+		<form action="wpmu-admin.php?page=demodata_form&amp;create=comments" method="post" class="demodata" id="createcommentsform">
 		<fieldset>
 		
 				<h4>' . __("Comments", "demodata") . '</h4>
@@ -1818,12 +1951,14 @@ function demodata_form()
 			<p><label for="createcomments">' . __("Create comments", "demodata") . '</label>
 			<input type="hidden" name="create" value="comments" />
 			<input type="hidden" name="action" value="create" />
-			<button type="submit" class="button" id="createcomments">' . __("Create comments", "demodata") . '</button></p>
+			<button type="submit" class="button demodatabutton" id="createcomments">' . __("Create comments", "demodata") . '</button></p>
 			
 		</fieldset>
 		</form>
+		
+		<div id="createcommentsoutput"></div>
 			
-		<form action="wpmu-admin.php?page=demodata_form&amp;create=blogs" method="post" class="demodata">
+		<form action="wpmu-admin.php?page=demodata_form&amp;create=blogs" method="post" class="demodata" id="createlinksform">
 		<fieldset>
 		
 			<h4>' . __("Links", "demodata") . '</h4>
@@ -1834,10 +1969,12 @@ function demodata_form()
 			<p><label for="createlinks">' . __("Create links", "demodata") . '</label>
 			<input type="hidden" name="create" value="links" />
 			<input type="hidden" name="action" value="create" />
-			<button type="submit" class="button" id="createlinks">' . __("Create links", "demodata") . '</button></p>
+			<button type="submit" class="button demodatabutton" id="createlinks">' . __("Create links", "demodata") . '</button></p>
 			
 		</fieldset>
 		</form>
+		
+		<div id="createlinksoutput"></div>
 		';
 		
 		// if Buddypress has been detected
@@ -1845,7 +1982,7 @@ function demodata_form()
 		{
 		echo '	
 		
-		<form action="wpmu-admin.php?page=demodata_form&amp;create=groups" method="post" class="demodata">
+		<form action="wpmu-admin.php?page=demodata_form&amp;create=groups" method="post" class="demodata" id="creategroupsform">
 		<fieldset>
 		
 			<h4>' . __("BuddyPress Groups", "demodata") . '</h4>
@@ -1855,19 +1992,28 @@ function demodata_form()
 			
 			<p><label for="maxgroupmembership">' . __("Max. number of groups per user (maximum 50)", "demodata") . '</label>
 			<input type="text" name="maxgroupmembership" id="maxgroupmembership" value="25" /></p>
-			
+			';
+			if ( function_exists( "groups_new_wire_post" ) ) {
+			echo '
 			<p><label for="maxgroupwire">' . __("Max. number of wire messages per group (maximum 25)", "demodata") . '</label>
 			<input type="text" name="maxgroupwire" id="maxgroupwire" value="10" /></p>
-			
+			';
+			}
+			echo '
 			<p><label for="creategroups">' . __("Create groups", "demodata") . '</label>
 			<input type="hidden" name="create" value="groups" />
 			<input type="hidden" name="action" value="create" />
-			<button type="submit" class="button" id="creategroups">' . __("Create groups", "demodata") . '</button></p>
+			<button type="submit" class="button demodatabutton" id="creategroups">' . __("Create groups", "demodata") . '</button></p>
 			
 		</fieldset>
 		</form>
 		
-		<form action="wpmu-admin.php?page=demodata_form&amp;create=wire" method="post" class="demodata">
+		<div id="creategroupsoutput"></div>
+		';
+		
+		if ( function_exists( "bp_wire_new_post" ) ) {
+		echo '
+		<form action="wpmu-admin.php?page=demodata_form&amp;create=wire" method="post" class="demodata" id="createwireform">
 		<fieldset>
 		
 			<h4>' . __("BuddyPress Wire Messages", "demodata") . '</h4>
@@ -1878,12 +2024,17 @@ function demodata_form()
 			<p><label for="createwire">' . __("Create wire messages", "demodata") . '</label>
 			<input type="hidden" name="create" value="wire" />
 			<input type="hidden" name="action" value="create" />
-			<button type="submit" class="button" id="createwire">' . __("Create wire", "demodata") . '</button></p>
+			<button type="submit" class="button demodatabutton" id="createwire">' . __("Create wire", "demodata") . '</button></p>
 			
 		</fieldset>
 		</form>
 		
-		<form action="wpmu-admin.php?page=demodata_form&amp;create=status" method="post" class="demodata">
+		<div id="createwireoutput"></div>
+		';
+		}
+		
+		echo '
+		<form action="wpmu-admin.php?page=demodata_form&amp;create=status" method="post" class="demodata" id="createstatusform">
 		<fieldset>
 		
 			<h4>' . __("BuddyPress Member Statuses", "demodata") . '</h4>
@@ -1894,12 +2045,14 @@ function demodata_form()
 			<p><label for="createstatus">' . __("Create status messages", "demodata") . '</label>
 			<input type="hidden" name="create" value="status" />
 			<input type="hidden" name="action" value="create" />
-			<button type="submit" class="button" id="createstatus">' . __("Create statuses", "demodata") . '</button></p>
+			<button type="submit" class="button demodatabutton" id="createstatus">' . __("Create statuses", "demodata") . '</button></p>
 			
 		</fieldset>
 		</form>
 		
-		<form action="wpmu-admin.php?page=demodata_form&amp;create=friends" method="post" class="demodata">
+		<div id="createstatusoutput"></div>
+		
+		<form action="wpmu-admin.php?page=demodata_form&amp;create=friends" method="post" class="demodata" id="createfriendsform">
 		<fieldset>
 			
 			<h4>' . __("BuddyPress Friends", "demodata") . '</h4>
@@ -1912,10 +2065,12 @@ function demodata_form()
 			<p><label for="createfriends">' . __("Create friends", "demodata") . '</label>
 			<input type="hidden" name="create" value="friends" />
 			<input type="hidden" name="action" value="create" />
-			<button type="submit" class="button" id="createfriends">' . __("Create friends", "demodata") . '</button></p>
+			<button type="submit" class="button demodatabutton" id="createfriends">' . __("Create friends", "demodata") . '</button></p>
 		
 		</fieldset>
 		</form>
+		
+		<div id="createfriendsoutput"></div>
 		
 		';
 		}
@@ -1923,7 +2078,7 @@ function demodata_form()
 		echo '		
 		<h3>Delete demo data</h3>
 		
-		<form action="wpmu-admin.php?page=demodata_form" method="post" class="demodata">
+		<form action="wpmu-admin.php?page=demodata_form" method="post" class="demodata" id="deleteform">
 		<fieldset>
 		
 		';
@@ -1940,10 +2095,12 @@ function demodata_form()
 		echo '
 			<p><label for="delete">Delete demo data</label>
 			<input type="hidden" name="action" value="delete" />
-			<button type="submit" class="button" name="delete" id="delete">Delete</button></p>
+			<button type="submit" class="button demodatabutton" name="delete" id="delete">Delete</button></p>
 		
 		</fieldset>
 		</form>
+		
+		<div id="deleteoutput"></div>
 	';
 	
 	demodata_wp_plugin_standard_footer( "GBP", "Demo Data Creator", "Chris Taylor", "chris@stillbreathing.co.uk", "http://wordpress.org/extend/plugins/demo-data-creator/" );
