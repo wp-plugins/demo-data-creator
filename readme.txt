@@ -4,9 +4,9 @@ Donate link: http://www.stillbreathing.co.uk/donate/
 Tags: wordpress mu, buddypress, demo, data, example, dummy, users, blogs, sample
 Requires at least: 2.7
 Tested up to: 2.9.2
-Stable tag: 0.8
+Stable tag: 0.9
 
-Demo Data Creator is a Wordpress MU and BuddyPress plugin that allows a Wordpress developer to create demo users, blogs, posts, comments and blogroll links for a Wordpress MU site. For BuddyPress you can also create user friendships, user statuses, user wire posts, groups, group members and group wire posts.
+Demo Data Creator is a Wordpress, WPMU and BuddyPress plugin that allows a Wordpress developer to create demo users, blogs, posts, comments and blogroll links for a Wordpress site. For BuddyPress you can also create user friendships, user statuses, user wire posts, groups, group members and group wire posts.
 
 == Description ==
 
@@ -16,11 +16,11 @@ If you develop Wordpress MU websites it's useful to have some demo data in your 
 
 Historically it's been a pain to add that data in. Either you need to take a backup of another site and use that data, or you need to tediously create multiple users and blogs yourself. No more, not now my Demo Data Creator is in town!
 
-This Wordpress MU and BuddyPress plugin gives you a new admin screen where you can enter some parameters, click a button and (after a short wait) random demo data will be created. The parameter options include:
+This Wordpress, WPMU and BuddyPress plugin gives you a new admin screen where you can enter some parameters, click a button and (after a short wait) random demo data will be created. The parameter options include:
 
     * Number of users to create
-    * Number of blogs per user
-	* Whether users must have a blog not
+    * Number of blogs per user (for WPMU)
+	* Whether users must have a blog
 	* Number of categories in each blog
     * Number of posts in each blog
 	* Number of paragraphs in each blog post
@@ -60,6 +60,8 @@ The DemoData plugin now supports BuddyPress.
 1. The demo data admin page
 
 == Changelog ==
+
+0.9 (2010/03/23) Made plugin compatible with standard Wordpress
 
 0.8 Added compatibility with BuddyPress 1.2. Converted form to use AJAX where possible.
 
