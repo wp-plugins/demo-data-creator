@@ -10,6 +10,8 @@ Demo Data Creator is a Wordpress, WPMU and BuddyPress plugin that allows a Wordp
 
 == Description ==
 
+Please note: On activation this plugin will send a message to the developer with your site name and URL. This information will be kept private. If you are not happy with the developer knowing you are using their plugin, please do not use it.
+
 Update: This plugin is now compatible with BuddyPress 1.2.
 
 If you develop Wordpress MU websites it's useful to have some demo data in your system while it's being built. This allows you to check that lists of things are displaying as they should, and that themes are working when they get data in them.
