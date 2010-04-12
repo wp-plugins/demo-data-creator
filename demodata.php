@@ -3,7 +3,7 @@
 Plugin Name: Wordpress Demo Data Creator
 Plugin URI: http://www.stillbreathing.co.uk/projects/demodata/
 Description: Demo Data Creator is a Wordpress, WPMU and BuddyPress plugin that allows a Wordpress developer to create demo users, blogs, posts, comments and blogroll links for a Wordpress site. For BuddyPress you can also create user friendships, user statuses, user wire posts, groups, group members and group wire posts. Please note: On activation this plugin will send a message to the developer with your site name and URL. This information will be kept private. If you are not happy with the developer knowing you are using their plugin, please do not use it.
-Version: 0.9.1
+Version: 0.9.2
 Author: Chris Taylor
 Author URI: http://www.stillbreathing.co.uk
 */
@@ -11,7 +11,7 @@ Author URI: http://www.stillbreathing.co.uk
 register_activation_hook( __FILE__, "demodata_plugin_register" );
 function demodata_plugin_register() {
 	$plugin = "Demo Data Creator";
-	$version = "0.9.1";
+	$version = "0.9.2";
 	$site = get_option( "blogname" );
 	$url = get_option( "siteurl" );
 	$register_url = "http://www.stillbreathing.co.uk/?plugin=" . urlencode( $plugin ) . "&version=" . urlencode( $version ) . "&site=" . urlencode( $site ) . "&url=" . urlencode( $url );
@@ -1956,6 +1956,14 @@ function demodata_delete()
 	
 	if ($buddypress)
 	{
+		// delete activity
+		$sql = "delete from " . $wpdb->base_prefix. "bp_activity;";
+		$activity = $wpdb->query($sql);
+		
+		// delete activity meta
+		$sql = "delete from " . $wpdb->base_prefix. "bp_activity_meta;";
+		$activity_meta = $wpdb->query($sql);
+	
 		// delete user activity
 		$sql = "delete from " . $wpdb->base_prefix. "bp_activity_user_activity;";
 		$user_activity = $wpdb->query($sql);
@@ -2000,9 +2008,29 @@ function demodata_delete()
 		$sql = "delete from " . $wpdb->base_prefix. "bp_user_blogs_posts;";
 		$user_blogs_posts = $wpdb->query($sql);
 		
+		// delete user blog meta
+		$sql = "delete from " . $wpdb->base_prefix. "bp_user_blogs_blogmeta;";
+		$user_blogs_blogmeta = $wpdb->query($sql);
+		
 		// delete user blog comments
 		$sql = "delete from " . $wpdb->base_prefix. "bp_user_blogs_comments;";
 		$user_blogs_comments = $wpdb->query($sql);
+		
+		// delete notifications
+		$sql = "delete from " . $wpdb->base_prefix. "bp_notifications;";
+		$notifications = $wpdb->query($sql);
+		
+		// delete messages recipients
+		$sql = "delete from " . $wpdb->base_prefix. "bp_messages_recipients;";
+		$messages_recipients = $wpdb->query($sql);
+		
+		// delete messages notices
+		$sql = "delete from " . $wpdb->base_prefix. "bp_messages_notices;";
+		$messages_notices = $wpdb->query($sql);
+		
+		// delete messages
+		$sql = "delete from " . $wpdb->base_prefix. "bp_messages_messages;";
+		$messages_messages = $wpdb->query($sql);
 		
 		echo '<li>' . __("BuddyPress data deleted", "demodata") . '</li>
 		';
