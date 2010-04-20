@@ -2,21 +2,21 @@
 /*
 Plugin Name: Wordpress Demo Data Creator
 Plugin URI: http://www.stillbreathing.co.uk/projects/demodata/
-Description: Demo Data Creator is a Wordpress, WPMU and BuddyPress plugin that allows a Wordpress developer to create demo users, blogs, posts, comments and blogroll links for a Wordpress site. For BuddyPress you can also create user friendships, user statuses, user wire posts, groups, group members and group wire posts. Please note: On activation this plugin will send a message to the developer with your site name and URL. This information will be kept private. If you are not happy with the developer knowing you are using their plugin, please do not use it.
-Version: 0.9.2
+Description: Demo Data Creator is a Wordpress, WPMU and BuddyPress plugin that allows a Wordpress developer to create demo users, blogs, posts, comments and blogroll links for a Wordpress site. For BuddyPress you can also create user friendships, user statuses, user wire posts, groups, group members and group wire posts.
+Version: 0.9.3
 Author: Chris Taylor
 Author URI: http://www.stillbreathing.co.uk
 */
 
-register_activation_hook( __FILE__, "demodata_plugin_register" );
-function demodata_plugin_register() {
-	$plugin = "Demo Data Creator";
-	$version = "0.9.2";
-	$site = get_option( "blogname" );
-	$url = get_option( "siteurl" );
-	$register_url = "http://www.stillbreathing.co.uk/?plugin=" . urlencode( $plugin ) . "&version=" . urlencode( $version ) . "&site=" . urlencode( $site ) . "&url=" . urlencode( $url );
-	wp_remote_fopen( $register_url );
-}
+require_once( "plugin-register.class.php" );
+$register = new Plugin_Register();
+$register->file = __FILE__;
+$register->slug = "demodata";
+$register->name = "Demo Data Creator";
+$register->version = "0.9.3";
+$register->developer = "Chris Taylor";
+$register->homepage = "http://www.stillbreathing.co.uk";
+$register->Plugin_Register();
 
 // if the file is being called in an AJAX call
 if ( isset($_GET['ajax']) && $_GET['ajax'] == "true" )
