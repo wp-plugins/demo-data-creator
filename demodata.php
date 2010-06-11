@@ -3,7 +3,7 @@
 Plugin Name: Wordpress Demo Data Creator
 Plugin URI: http://www.stillbreathing.co.uk/wordpress/demo-data-creator/
 Description: Demo Data Creator is a Wordpress, WPMU and BuddyPress plugin that allows a Wordpress developer to create demo users, blogs, posts, comments and blogroll links for a Wordpress site. For BuddyPress you can also create user friendships, user statuses, user wire posts, groups, group members and group wire posts.
-Version: 0.9.4
+Version: 0.9.5
 Author: Chris Taylor
 Author URI: http://www.stillbreathing.co.uk
 */
@@ -13,7 +13,7 @@ $register = new Plugin_Register();
 $register->file = __FILE__;
 $register->slug = "demodata";
 $register->name = "Demo Data Creator";
-$register->version = "0.9.4";
+$register->version = "0.9.5";
 $register->developer = "Chris Taylor";
 $register->homepage = "http://www.stillbreathing.co.uk";
 $register->Plugin_Register();
@@ -31,7 +31,7 @@ if ( isset($_GET['ajax']) && $_GET['ajax'] == "true" )
 add_action('admin_menu', 'demodata_add_menu_items');
 
 // if this is not WPMU
-if (!function_exists('is_site_admin')) {
+if (!function_exists('is_site_admin') || !function_exists('is_super_admin')) {
 	// set up the $current_site global
 	global $current_site;
 	$current_site->domain = demodata_blog_domain();
@@ -79,7 +79,7 @@ function demodata_create()
 		
 			// creating blogs
 			case "blogs":
-				if (function_exists('is_site_admin')){
+				if (function_exists('is_site_admin') || function_exists('is_super_admin')){
 					demodata_create_blogs();
 				}
 				break;
@@ -137,19 +137,23 @@ function demodata_create()
 // add the menu items to the Site Admin list
 function demodata_add_menu_items()
 {
-	if (function_exists('is_site_admin') && is_site_admin())
+	if ((function_exists('is_super_admin') && is_super_admin()) || (function_exists('is_site_admin') && is_site_admin()))
 	{
-		if ($_GET["page"] == "demodata_form") {
+		if (isset($_GET["page"]) && $_GET["page"] == "demodata_form") {
 			add_action("admin_head", "demodata_css");
 			add_action("admin_head", "demodata_js");
 		}
-		add_submenu_page('wpmu-admin.php', 'Demo Data Creator', 'Demo Data Creator', 10, 'demodata_form', 'demodata_form');
+		if (function_exists('is_super_admin')) {
+			add_submenu_page('ms-admin.php', 'Demo Data Creator', 'Demo Data Creator', 'edit_users', 'demodata_form', 'demodata_form');
+		} else {
+			add_submenu_page('wpmu-admin.php', 'Demo Data Creator', 'Demo Data Creator', 'edit_users', 'demodata_form', 'demodata_form');
+		}
 	} else {
 		if ($_GET["page"] == "demodata_form") {
 			add_action("admin_head", "demodata_css");
 			add_action("admin_head", "demodata_js");
 		}
-		add_submenu_page('tools.php', 'Demo Data Creator', 'Demo Data Creator', 10, 'demodata_form', 'demodata_form');
+		add_submenu_page('tools.php', 'Demo Data Creator', 'Demo Data Creator', 'edit_users', 'demodata_form', 'demodata_form');
 	}
 }
 
@@ -202,7 +206,7 @@ function demodata_js()
 {
 	if (isset($_GET["page"]) && $_GET["page"] == "demodata_form")
 	{
-		if (function_exists('is_site_admin')) {
+		if (function_exists('is_site_admin') || function_exists('is_super_admin')) {
 		echo '
 		<script type="text/javascript">
 		jQuery(document).ready(function(){
@@ -214,8 +218,15 @@ function demodata_js()
 				var formdata = form.serialize();
 				jQuery.ajax({
 					data: formdata,
-					type: "POST",
-					url: "wpmu-admin.php?page=demodata_form&ajax=true",
+					type: "POST",';
+					if ( function_exists('is_super_admin') ) {
+					echo 'url: "ms-admin.php?page=demodata_form&ajax=true",
+					';
+					} else {
+					echo 'url: "wpmu-admin.php?page=demodata_form&ajax=true",
+					';
+					}
+		echo '
 					success: function(data) {
 						div.html(data);
 					},
@@ -382,7 +393,7 @@ function demodata_create_users()
 		$buddypress = defined( 'BP_ROOT_BLOG' );
 	
 		// turn off new registration notifications for WPMU
-		if (function_exists('is_site_admin')) {
+		if (function_exists('is_site_admin') || function_exists('is_super_admin')) {
 			$registrationnotification = get_site_option("registrationnotification");
 			update_site_option("registrationnotification", "no");
 		}
@@ -429,7 +440,7 @@ function demodata_create_users()
 		}
 		
 		// turn registration notification back on for WPMU
-		if (function_exists('is_site_admin')) {
+		if (function_exists('is_site_admin') || function_exists('is_super_admin')) {
 			update_site_option("registrationnotification", $registrationnotification);
 		}
 	
@@ -470,7 +481,7 @@ function demodata_create_users()
 function demodata_create_blogs()
 {
 	// if this is WPMU
-	if (function_exists('is_site_admin')) {
+	if (function_exists('is_site_admin') || function_exists('is_super_admin')) {
 
 		global $wpdb;
 		global $current_site;
@@ -643,7 +654,7 @@ function demodata_create_categories()
 		$categoryx = 0;
 		
 		// if this is WPMU
-		if (function_exists('is_site_admin')) {
+		if (function_exists('is_site_admin') || function_exists('is_super_admin')) {
 		
 			// get blogs
 			$sql = "select blog_id, domain from " . $wpdb->blogs . ";";
@@ -745,7 +756,7 @@ function demodata_create_posts()
 		$postx = 0;
 		
 		// if this is WPMU
-		if (function_exists('is_site_admin')) {
+		if (function_exists('is_site_admin') || function_exists('is_super_admin')) {
 		
 			// get blogs
 			$sql = "select blog_id, domain from " . $wpdb->blogs . ";";
@@ -850,7 +861,7 @@ function demodata_create_pages()
 		$pagex = 0;
 		
 		// if this is WPMU
-		if (function_exists('is_site_admin')) {
+		if (function_exists('is_site_admin') || function_exists('is_super_admin')) {
 		
 			// get blogs
 			$sql = "select blog_id, domain from " . $wpdb->blogs . ";";
@@ -1032,7 +1043,7 @@ function demodata_create_comments()
 		$commentx = 0;
 		
 		// if this is WPMU
-		if (function_exists('is_site_admin')) {
+		if (function_exists('is_site_admin') || function_exists('is_super_admin')) {
 		
 			// get blogs
 			$sql = "select blog_id, domain from " . $wpdb->blogs . ";";
@@ -1148,7 +1159,7 @@ function demodata_create_links()
 		$linkx = 0;
 		
 		// if this is WPMU
-		if (function_exists('is_site_admin')) {
+		if (function_exists('is_site_admin') || function_exists('is_super_admin')) {
 		
 			// get blogs
 			$sql = "select blog_id, domain from " . $wpdb->blogs . ";";
@@ -1691,7 +1702,7 @@ function demodata_create_page($blogdomain, $parentid, $maxpagelength, $pagex)
 function demodata_create_blog($newid, $blogdomain, $blogname, $user_id)
 {
 	// if this is WPMU
-	if (function_exists('is_site_admin') && $newid > 1)
+	if ((function_exists('is_site_admin') || function_exists('is_super_admin')) && $newid > 1)
 	{
 		global $current_site;
 		global $current_user;
@@ -1885,7 +1896,7 @@ function demodata_delete()
 	$i = 0;
 	
 	// if this is WPMU
-	if (function_exists('is_site_admin')) {
+	if (function_exists('is_site_admin') || function_exists('is_super_admin')) {
 	
 		// count blogs
 		$sql = "select count(blog_id) from " . $wpdb->blogs . " where blog_id > 1;";
@@ -1933,7 +1944,7 @@ function demodata_delete()
 	$sitecategories = $wpdb->query($sql);
 	
 	// if this is WPMU
-	if (function_exists('is_site_admin')) {
+	if (function_exists('is_site_admin') || function_exists('is_super_admin')) {
 	
 		// alter auto integer
 		$sql = "ALTER TABLE " . $wpdb->blogs . " AUTO_INCREMENT = 2;";
@@ -2130,7 +2141,7 @@ function demodata_form()
 		';
 		
 		// if this is WPMU
-		if (function_exists('is_site_admin')) {
+		if (function_exists('is_site_admin') || function_exists('is_super_admin')) {
 		
 		echo '
 		<form action="wpmu-admin.php?page=demodata_form&amp;create=blogs" method="post" class="demodata" id="createblogsform">
@@ -2592,18 +2603,18 @@ Duis imperdiet, mi eget euismod fermentum, odio nisl posuere quam, sit amet tris
 function demodata_wp_plugin_standard_header( $currency = "", $plugin_name = "", $author_name = "", $paypal_address = "", $bugs_page ) {
 	$r = "";
 	$option = get_option( $plugin_name . " header" );
-	if ( $_GET[ "header" ] != "" || $_GET["thankyou"] == "true" ) {
+	if ( ( isset( $_GET[ "header" ] ) &&  $_GET[ "header" ] != "" ) || ( isset( $_GET["thankyou"] ) && $_GET["thankyou"] == "true" ) ) {
 		update_option( $plugin_name . " header", "hide" );
 		$option = "hide";
 	}
-	if ( $_GET["thankyou"] == "true" ) {
+	if ( isset( $_GET["thankyou"] ) && $_GET["thankyou"] == "true" ) {
 		$r .= '<div class="updated"><p>' . __( "Thank you for donating" ) . '</p></div>';
 	}
-	if ( $currency != "" && $plugin_name != "" && $_GET[ "header" ] != "hide" && $option != "hide" )
+	if ( $currency != "" && $plugin_name != "" && isset( $_GET[ "header" ] ) && $_GET[ "header" ] != "hide" && $option != "hide" )
 	{
 		$r .= '<div class="updated">';
 		$pageURL = 'http';
-		if ( $_SERVER["HTTPS"] == "on" ) { $pageURL .= "s"; }
+		if ( isset( $_SERVER["HTTPS"] ) && $_SERVER["HTTPS"] == "on" ) { $pageURL .= "s"; }
 		$pageURL .= "://";
 		if ( $_SERVER["SERVER_PORT"] != "80" ) {
 			$pageURL .= $_SERVER["SERVER_NAME"] . ":" . $_SERVER["SERVER_PORT"] . $_SERVER["REQUEST_URI"];
@@ -2652,6 +2663,20 @@ function demodata_wp_plugin_standard_footer( $currency = "", $plugin_name = "", 
 	if ( $currency != "" && $plugin_name != "" )
 	{
 		$r .= '<form id="wp_plugin_standard_footer_donate_form" action="https://www.paypal.com/cgi-bin/webscr" method="post" style="clear:both;padding-top:50px;"><p>';
+		$pageURL = 'http';
+		if ( isset( $_SERVER["HTTPS"] ) && $_SERVER["HTTPS"] == "on" ) { $pageURL .= "s"; }
+		$pageURL .= "://";
+		if ( $_SERVER["SERVER_PORT"] != "80" ) {
+			$pageURL .= $_SERVER["SERVER_NAME"] . ":" . $_SERVER["SERVER_PORT"] . $_SERVER["REQUEST_URI"];
+		} else {
+			$pageURL .= $_SERVER["SERVER_NAME"] . $_SERVER["REQUEST_URI"];
+		}
+		if ( strpos( $pageURL, "?") === false ) {
+			$pageURL .= "?";
+		} else {
+			$pageURL .= "&";
+		}
+		$pageURL = htmlspecialchars( $pageURL );
 		if ( $bugs_page != "" ) {
 			$r .= sprintf ( __( '<a href="%s">Bugs</a>' ), $bugs_page );
 		}
