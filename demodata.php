@@ -3,7 +3,7 @@
 Plugin Name: Wordpress Demo Data Creator
 Plugin URI: http://www.stillbreathing.co.uk/wordpress/demo-data-creator/
 Description: Demo Data Creator is a Wordpress, WPMU and BuddyPress plugin that allows a Wordpress developer to create demo users, blogs, posts, comments and blogroll links for a Wordpress site. For BuddyPress you can also create user friendships, user statuses, user wire posts, groups, group members and group wire posts.
-Version: 0.9.5
+Version: 0.9.6
 Author: Chris Taylor
 Author URI: http://www.stillbreathing.co.uk
 */
@@ -13,7 +13,7 @@ $register = new Plugin_Register();
 $register->file = __FILE__;
 $register->slug = "demodata";
 $register->name = "Demo Data Creator";
-$register->version = "0.9.5";
+$register->version = "0.9.6";
 $register->developer = "Chris Taylor";
 $register->homepage = "http://www.stillbreathing.co.uk";
 $register->Plugin_Register();
@@ -491,12 +491,14 @@ function demodata_create_blogs()
 		$membershiptype = @$_POST["membershiptype"] == "" ? 1 : (int)$_POST["membershiptype"];
 		$maxblogsperuser = @$_POST["maxblogsperuser"] == "" ? 1 : (int)$_POST["maxblogsperuser"];
 		$maxblogsperuser = $maxblogsperuser > 5 ? $maxblogsperuser = 5 : $maxblogsperuser = $maxblogsperuser;
+		$blogpath = @$_POST["blogpath"] == "" ? "/" : $_POST["blogpath"];
 		
 		// check all the settings
 		if (
 			$bloguserstoprocess != "" &&
 			$membershiptype != "" && 
-			$maxblogsperuser != ""
+			$maxblogsperuser != "" &&
+			$blogpath != ""
 		)
 		{
 			$go = true;
@@ -558,7 +560,7 @@ function demodata_create_blogs()
 						$blogdomain = "demoblog" . $blogid;
 
 						// check the blog can be created
-						if (!demodata_create_blog($blogid, $blogdomain, $blogname, $user->id))
+						if (!demodata_create_blog($blogid, $blogdomain, $blogpath, $blogname, $user->id))
 						{
 							$success = false;
 							$error .= "<li>Error creating blog " . $blogid . '</li>';
@@ -1699,7 +1701,7 @@ function demodata_create_page($blogdomain, $parentid, $maxpagelength, $pagex)
 }
 
 // create a blog (taken from /wp-admin/wpmu-edit.php)
-function demodata_create_blog($newid, $blogdomain, $blogname, $user_id)
+function demodata_create_blog($newid, $blogdomain, $blogpath, $blogname, $user_id)
 {
 	// if this is WPMU
 	if ((function_exists('is_site_admin') || function_exists('is_super_admin')) && $newid > 1)
@@ -1709,25 +1711,36 @@ function demodata_create_blog($newid, $blogdomain, $blogname, $user_id)
 		global $wpdb;
 		global $wp_queries;
 		
-		//require_once( ABSPATH . 'wp-admin/includes/upgrade.php');
-		
 		$wp_queries = str_replace($wpdb->base_prefix . "1_", $wpdb->base_prefix . $newid . "_", $wp_queries);
 		$wp_queries = str_replace($wpdb->base_prefix . ($newid - 1) . "_", $wpdb->base_prefix . $newid . "_", $wp_queries);
 		
-		$base = "/";
+		$base = $blogpath;
 		
 		if( strtolower( constant('VHOST') ) == 'yes' ) {
 			$newdomain = $blogdomain.".".$current_site->domain;
 			$path = $base;
 		} else {
 			$newdomain = $current_site->domain;
-			$path = $base.$blogdomain.'/';
+			$path = $base.$blogdomain;
 		}
 		
 		// install this blog
 		$meta = apply_filters('signup_create_blog_meta', array ('lang_id' => 1, 'public' => 1));
 		$id = wpmu_create_blog($newdomain, $path, $blogname, $user_id , $meta, $current_site->id);
 
+		// in case the tables haven't been created, create them
+		$post_table = $wpdb->base_prefix . $id . "_posts";
+		$post_table_exists = $wpdb->get_results( "show tables like '" . $post_table . "';" );
+		if ( !$post_table_exists ) {
+			print "<p>Table <code>" . $post_table . "</code> was not created ... attempting to create blog tables manually</p>";
+			global $wp_queries;
+			$wp_queries = str_replace( $wpdb->base_prefix, $wpdb->base_prefix . $id . "_", $wp_queries );
+			dbDelta( $wp_queries );
+			switch_to_blog($id);
+			populate_options();
+			restore_current_blog();
+		}
+		
 		if( !is_wp_error($id) ) {
 			if( get_user_option( $user_id, 'primary_blog' ) == 1 )
 				update_user_option( $user_id, 'primary_blog', $id, true );
@@ -2162,6 +2175,9 @@ function demodata_form()
 			
 			<p><label for="membershiptype2">' . __("Users may have zero or more blogs", "demodata") . '</label>
 			<input type="radio" name="membershiptype" id="membershiptype2" value="2" /></p>
+			
+			<p><label for="blogpath">' . __("Default path", "demodata") . '</label>
+			<input type="text" name="blogpath" id="blogpath" value="/" /></p>
 			
 			<p><label for="createblogs">' . __("Create blogs", "demodata") . '</label>
 			<input type="hidden" name="create" value="blogs" />
