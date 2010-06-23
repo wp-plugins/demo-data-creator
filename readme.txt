@@ -1,25 +1,25 @@
-=== Wordpress MU Demo Data Creator ===
+=== Demo Data Creator ===
 Contributors: mrwiblog
 Donate link: http://www.stillbreathing.co.uk/donate/
-Tags: wordpress mu, buddypress, demo, data, example, dummy, users, blogs, sample
+Tags: wordpress, wpmu, buddypress, demo, data, example, dummy, users, blogs, sample
 Requires at least: 2.7
 Tested up to: 3.0
-Stable tag: 0.9.6
+Stable tag: 0.9.7
 
-Demo Data Creator is a Wordpress, WPMU and BuddyPress plugin that allows a Wordpress developer to create demo users, blogs, posts, comments and blogroll links for a Wordpress site. For BuddyPress you can also create user friendships, user statuses, user wire posts, groups, group members and group wire posts.
+Demo Data Creator is a Wordpress, WPMU/MultiSite and BuddyPress plugin that allows a Wordpress developer to create demo users, blogs, posts, comments and blogroll links for a Wordpress site. For BuddyPress you can also create user friendships, user statuses, user wire posts, groups, group members and group wire posts.
 
 == Description ==
 
-Update: This plugin is now compatible with BuddyPress 1.2 and has been tested with WordPress 3.0-BETA-2.
+Update: This plugin is now compatible with BuddyPress 1.2 and has been tested with WordPress 3.0.
 
-If you develop Wordpress MU websites it's useful to have some demo data in your system while it's being built. This allows you to check that lists of things are displaying as they should, and that themes are working when they get data in them.
+If you develop Wordpress websites it's useful to have some demo data in your system while it's being built. This allows you to check that lists of things are displaying as they should, and that themes are working when they get data in them.
 
 Historically it's been a pain to add that data in. Either you need to take a backup of another site and use that data, or you need to tediously create multiple users and blogs yourself. No more, not now my Demo Data Creator is in town!
 
-This Wordpress, WPMU and BuddyPress plugin gives you a new admin screen where you can enter some parameters, click a button and (after a short wait) random demo data will be created. The parameter options include:
+This Wordpress, WPMU/MultiSite and BuddyPress plugin gives you a new admin screen where you can enter some parameters, click a button and (after a short wait) random demo data will be created. The parameter options include:
 
     * Number of users to create
-    * Number of blogs per user (for WPMU)
+    * Number of blogs per user (for WPMU/MultiSite)
 	* Whether users must have a blog
 	* Number of categories in each blog
     * Number of posts in each blog
@@ -61,7 +61,9 @@ The DemoData plugin now supports BuddyPress.
 
 == Changelog ==
 
-0.9.6 (2010/06/11) Fixed bug caused by with WordPress 3.0 not creating blog tables
+0.9.7 (2010/06/23) Fixed bug with menu in standard WP
+
+0.9.6 (2010/06/18) Fixed bug caused by with WordPress 3.0 not creating blog tables
 
 0.9.5 (2010/06/11) Made plugin compatible with WordPress 3.0
 
