@@ -4,7 +4,7 @@ Donate link: http://www.stillbreathing.co.uk/donate/
 Tags: wordpress, wpmu, buddypress, demo, data, example, dummy, users, blogs, sample
 Requires at least: 2.7
 Tested up to: 3.0
-Stable tag: 0.9.7
+Stable tag: 0.9.7.1
 
 Demo Data Creator is a Wordpress, WPMU/MultiSite and BuddyPress plugin that allows a Wordpress developer to create demo users, blogs, posts, comments and blogroll links for a Wordpress site. For BuddyPress you can also create user friendships, user statuses, user wire posts, groups, group members and group wire posts.
 
@@ -43,7 +43,11 @@ Post content and comment text is automatically generated from Lorem ipsum text, 
 
 == Installation ==
 
-The plugin should be placed in your /wp-content/mu-plugins/ directory (*not* /wp-content/plugins/) and requires no activation. SO the path to the file should be /wp-content/mu-plugins/demodata.php. Acces the form from the "Site Admin" menu in the Dashboard.
+Install from the WordPress plugin repository using the installer, or put all the files into a /wp-content/plugins/demodata/ directory. Activate from the plugin admin screen.
+
+You can find the Demo Data Creator admin menu option in the "Tools" menu. If you are using WordPress MultiSite (version 3.0 or above) you can find the Demo Data Creator admin menu option in the "Super Admin" menu.
+
+If using WPMU (NOT Wordpress 3.0 MultiSite): The plugin should be placed in your /wp-content/mu-plugins/ directory (*not* /wp-content/plugins/) and requires no activation. So the path to the file should be /wp-content/mu-plugins/demodata.php. Access the form from the "Site Admin" menu in the Dashboard.
 
 == Frequently Asked Questions ==
 
@@ -61,34 +65,70 @@ The DemoData plugin now supports BuddyPress.
 
 == Changelog ==
 
-0.9.7 (2010/06/23) Fixed bug with menu in standard WP
+= 0.9.7.1 (2010/07/04) =
 
-0.9.6 (2010/06/18) Fixed bug caused by with WordPress 3.0 not creating blog tables
+Updated documentation
 
-0.9.5 (2010/06/11) Made plugin compatible with WordPress 3.0
+= 0.9.7 (2010/06/23) =
 
-0.9.4 (2010/05/14) Updated plugin URI
+Fixed bug with menu in standard WP
 
-0.9.3 (2010/04/20) Implemented new Plugin Register version.
+= 0.9.6 (2010/06/18) =
 
-0.9.2 (2010/04/12) Fixed bug with non-deletion of activity streams
+Fixed bug caused by with WordPress 3.0 not creating blog tables
 
-0.9.1 (2010/04/01) Added Plugin Register code
+= 0.9.5 (2010/06/11) =
 
-0.9 (2010/03/23) Made plugin compatible with standard Wordpress
+Made plugin compatible with WordPress 3.0
 
-0.8 Added compatibility with BuddyPress 1.2. Converted form to use AJAX where possible.
+= 0.9.4 (2010/05/14) =
 
-0.7 Added support link and donate button
+Updated plugin URI
 
-0.6 Fixed bug which stopped demo blog tables being created
+= 0.9.3 (2010/04/20) =
 
-0.5 Fixed bugs with user wire posts, added support for group wire posts, cleaned up code
+Implemented new Plugin Register version
 
-0.4 Prepared code for proper translation support, fixed bug with BuddyPress XProfile data, added support for BuddyPress status messages
+= 0.9.2 (2010/04/12) =
 
-0.3 Cleaned up code
+Fixed bug with non-deletion of activity streams
 
-0.2 Added categories, pages for normal Wordpress MU sites. Added BuddyPress groups, group members and user friends BuddyPress-enabled sites.
+= 0.9.1 (2010/04/01) =
 
-0.1 Initial version added to Wordpress plugin repository
+Added Plugin Register code
+
+= 0.9 (2010/03/23) =
+
+Made plugin compatible with standard Wordpress
+
+= 0.8 =
+
+Added compatibility with BuddyPress 1.2. Converted form to use AJAX where possible.
+
+= 0.7 =
+
+Added support link and donate button
+
+= 0.6 =
+
+Fixed bug which stopped demo blog tables being created
+
+= 0.5 =
+
+Fixed bugs with user wire posts, added support for group wire posts, cleaned up code
+
+= 0.4 =
+
+Prepared code for proper translation support, fixed bug with BuddyPress XProfile data, added support for BuddyPress status messages
+
+= 0.3 =
+
+Cleaned up code
+
+= 0.2 =
+
+Added categories, pages for normal Wordpress MU sites. Added BuddyPress groups, group members and user friends BuddyPress-enabled sites.
+
+= 0.1 =
+
+Initial version added to Wordpress plugin repository
