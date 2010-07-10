@@ -3,7 +3,7 @@
 Plugin Name: Demo Data Creator
 Plugin URI: http://www.stillbreathing.co.uk/wordpress/demo-data-creator/
 Description: Demo Data Creator is a Wordpress, WPMU and BuddyPress plugin that allows a Wordpress developer to create demo users, blogs, posts, comments and blogroll links for a Wordpress site. For BuddyPress you can also create user friendships, user statuses, user wire posts, groups, group members and group wire posts.
-Version: 0.9.7.1
+Version: 0.9.7.2
 Author: Chris Taylor
 Author URI: http://www.stillbreathing.co.uk
 */
@@ -13,7 +13,7 @@ $register = new Plugin_Register();
 $register->file = __FILE__;
 $register->slug = "demodata";
 $register->name = "Demo Data Creator";
-$register->version = "0.9.7.1";
+$register->version = "0.9.7.2";
 $register->developer = "Chris Taylor";
 $register->homepage = "http://www.stillbreathing.co.uk";
 $register->Plugin_Register();
@@ -137,23 +137,29 @@ function demodata_create()
 // add the menu items to the Site Admin list
 function demodata_add_menu_items()
 {
-	if ((function_exists('is_super_admin') && is_super_admin() && defined('WP_ALLOW_MULTISITE') && WP_ALLOW_MULTISITE == true) || (function_exists('is_site_admin') && is_site_admin()))
-	{
-		if (isset($_GET["page"]) && $_GET["page"] == "demodata_form") {
-			add_action("admin_head", "demodata_css");
-			add_action("admin_head", "demodata_js");
-		}
-		if (function_exists('is_super_admin')) {
+	// add includes
+	if (isset($_GET["page"]) && $_GET["page"] == "demodata_form") {
+		add_action("admin_head", "demodata_css");
+		add_action("admin_head", "demodata_js");
+	}
+	
+	// WP3
+	if (version_compare(get_bloginfo("version"), "3", ">=")) {
+		// multisite
+		if (defined('WP_ALLOW_MULTISITE') && WP_ALLOW_MULTISITE == true) {
 			add_submenu_page('ms-admin.php', 'Demo Data Creator', 'Demo Data Creator', 'edit_users', 'demodata_form', 'demodata_form');
+		// standard
 		} else {
-			add_submenu_page('wpmu-admin.php', 'Demo Data Creator', 'Demo Data Creator', 'edit_users', 'demodata_form', 'demodata_form');
+			add_submenu_page('tools.php', 'Demo Data Creator', 'Demo Data Creator', 'edit_users', 'demodata_form', 'demodata_form');
 		}
 	} else {
-		if ($_GET["page"] == "demodata_form") {
-			add_action("admin_head", "demodata_css");
-			add_action("admin_head", "demodata_js");
+		// MU
+		if (function_exists('is_site_admin') && is_site_admin()) {
+			add_submenu_page('wpmu-admin.php', 'Demo Data Creator', 'Demo Data Creator', 'edit_users', 'demodata_form', 'demodata_form');
+		// standard
+		} else {
+			add_submenu_page('tools.php', 'Demo Data Creator', 'Demo Data Creator', 'edit_users', 'demodata_form', 'demodata_form');
 		}
-		add_submenu_page('tools.php', 'Demo Data Creator', 'Demo Data Creator', 'edit_users', 'demodata_form', 'demodata_form');
 	}
 }
 
@@ -206,7 +212,6 @@ function demodata_js()
 {
 	if (isset($_GET["page"]) && $_GET["page"] == "demodata_form")
 	{
-		if (function_exists('is_site_admin') || function_exists('is_super_admin')) {
 		echo '
 		<script type="text/javascript">
 		jQuery(document).ready(function(){
@@ -219,12 +224,27 @@ function demodata_js()
 				jQuery.ajax({
 					data: formdata,
 					type: "POST",';
-					if ( function_exists('is_super_admin') ) {
-					echo 'url: "ms-admin.php?page=demodata_form&ajax=true",
-					';
+					// WP3
+					if (version_compare(get_bloginfo("version"), "3", ">=")) {
+						// multisite
+						if (defined('WP_ALLOW_MULTISITE') && WP_ALLOW_MULTISITE == true) {
+							echo 'url: "ms-admin.php?page=demodata_form&ajax=true",
+							';
+						// standard
+						} else {
+							echo 'url: "tools.php?page=demodata_form&ajax=true",
+							';
+						}
 					} else {
-					echo 'url: "wpmu-admin.php?page=demodata_form&ajax=true",
-					';
+						// MU
+						if (function_exists('is_site_admin') && is_site_admin()) {
+							echo 'url: "wpmu-admin.php?page=demodata_form&ajax=true",
+							';
+						// standard
+						} else {
+							echo 'url: "tools.php?page=demodata_form&ajax=true",
+							';
+						}
 					}
 		echo '
 					success: function(data) {
@@ -240,34 +260,6 @@ function demodata_js()
 		});
 		</script>
 		';
-		} else {
-		echo '
-		<script type="text/javascript">
-		jQuery(document).ready(function(){
-			jQuery(".demodatabutton").bind("click", function(e) {
-				var id = jQuery(this).attr("id");
-				var div = jQuery("#" + id + "output");
-				var form = jQuery("#" + id + "form");
-				div.html(\'<div class="demodatapending"><p>' . __("Processing ... please wait", "demodata") . '</div></p>\');
-				var formdata = form.serialize();
-				jQuery.ajax({
-					data: formdata,
-					type: "POST",
-					url: "tools.php?page=demodata_form&ajax=true",
-					success: function(data) {
-						div.html(data);
-					},
-					error: function() {
-						div.html(\'<div class="demodataerror"><p>' . __("Sorry, the process failed", "demodata") . '</p></div>\');
-					}
-				});
-				e.preventDefault();
-				return false;
-			});
-		});
-		</script>
-		';
-		}
 	}
 }
 
@@ -2126,12 +2118,26 @@ function demodata_form()
 	
 	demodata_watch_form();
 	
+	$formpage = "tools";
+	// WP3
+	if (version_compare(get_bloginfo("version"), "3", ">=")) {
+		// multisite
+		if (defined('WP_ALLOW_MULTISITE') && WP_ALLOW_MULTISITE == true && is_super_admin()) {
+			$formpage = "ms-admin";
+		}
+	} else {
+		// MU
+		if (function_exists('is_site_admin') && is_site_admin()) {
+			$formpage = "wpmu-admin";
+		}
+	}
+	
 	echo '
 	
 		<h2>' . __("Create demo data", "demodata") . '</h2>
 		<p>' . __("Use the form below to create multiple test users and blog in this WPMU system. Warning: this may take some time if you are creating a lot of data.", "demodata") . '</p>
-		
-		<form action="wpmu-admin.php?page=demodata_form&amp;create=users" method="post" class="demodata" id="createusersform">
+
+		<form action="' . $formpage . '.php?page=demodata_form&amp;create=users" method="post" class="demodata" id="createusersform">
 		<fieldset>
 		
 			<h4>' . __("Users", "demodata") . '</h4>
@@ -2153,11 +2159,10 @@ function demodata_form()
 		<div id="createusersoutput"></div>
 		';
 		
-		// if this is WPMU
-		if (function_exists('is_site_admin') || function_exists('is_super_admin')) {
-		
+		// if this is WPMU/MultiSite
+		if ((version_compare(get_bloginfo("version"), "3", ">=") && defined('WP_ALLOW_MULTISITE') && WP_ALLOW_MULTISITE == true && is_super_admin()) || (function_exists("is_site_admin") && is_site_admin())) {
 		echo '
-		<form action="wpmu-admin.php?page=demodata_form&amp;create=blogs" method="post" class="demodata" id="createblogsform">
+		<form action="' . $formpage . '.php?page=demodata_form&amp;create=users" method="post" class="demodata" id="createblogsform">
 		<fieldset>
 		
 			<h4>' . __("Blogs", "demodata") . '</h4>
@@ -2193,7 +2198,7 @@ function demodata_form()
 		echo '
 		<div id="createblogsoutput"></div>
 		
-		<form action="wpmu-admin.php?page=demodata_form&amp;create=categories" method="post" class="demodata" id="createcategoriesform">
+		<form action="' . $formpage . '.php?page=demodata_form&amp;create=categories" method="post" class="demodata" id="createcategoriesform">
 		<fieldset>
 		
 			<h4>' . __("Categories", "demodata") . '</h4>
@@ -2211,7 +2216,7 @@ function demodata_form()
 		
 		<div id="createcategoriesoutput"></div>
 		
-		<form action="wpmu-admin.php?page=demodata_form&amp;create=posts" method="post" class="demodata" id="createpostsform">
+		<form action="' . $formpage . '.php?page=demodata_form&amp;create=posts" method="post" class="demodata" id="createpostsform">
 		<fieldset>
 		
 			<h4>' . __("Posts", "demodata") . '</h4>
@@ -2232,7 +2237,7 @@ function demodata_form()
 		
 		<div id="createpostsoutput"></div>
 		
-		<form action="wpmu-admin.php?page=demodata_form&amp;create=pages" method="post" class="demodata" id="createpagesform">
+		<form action="' . $formpage . '.php?page=demodata_form&amp;create=pages" method="post" class="demodata" id="createpagesform">
 		<fieldset>
 		
 			<h4>' . __("Pages", "demodata") . '</h4>
@@ -2259,7 +2264,7 @@ function demodata_form()
 		
 		<div id="createpagesoutput"></div>
 			
-		<form action="wpmu-admin.php?page=demodata_form&amp;create=comments" method="post" class="demodata" id="createcommentsform">
+		<form action="' . $formpage . '.php?page=demodata_form&amp;create=comments" method="post" class="demodata" id="createcommentsform">
 		<fieldset>
 		
 				<h4>' . __("Comments", "demodata") . '</h4>
@@ -2277,7 +2282,7 @@ function demodata_form()
 		
 		<div id="createcommentsoutput"></div>
 			
-		<form action="wpmu-admin.php?page=demodata_form&amp;create=blogs" method="post" class="demodata" id="createlinksform">
+		<form action="' . $formpage . '.php?page=demodata_form&amp;create=blogs" method="post" class="demodata" id="createlinksform">
 		<fieldset>
 		
 			<h4>' . __("Links", "demodata") . '</h4>
@@ -2301,7 +2306,7 @@ function demodata_form()
 		{
 		echo '	
 		
-		<form action="wpmu-admin.php?page=demodata_form&amp;create=groups" method="post" class="demodata" id="creategroupsform">
+		<form action="' . $formpage . '.php?page=demodata_form&amp;create=groups" method="post" class="demodata" id="creategroupsform">
 		<fieldset>
 		
 			<h4>' . __("BuddyPress Groups", "demodata") . '</h4>
@@ -2325,7 +2330,7 @@ function demodata_form()
 		
 		<div id="creategroupsoutput"></div>
 		
-		<form action="wpmu-admin.php?page=demodata_form&amp;create=wire" method="post" class="demodata" id="createwireform">
+		<form action="' . $formpage . '.php?page=demodata_form&amp;create=wire" method="post" class="demodata" id="createwireform">
 		<fieldset>
 		
 			<h4>' . __("BuddyPress Wire Messages", "demodata") . '</h4>
@@ -2343,7 +2348,7 @@ function demodata_form()
 		
 		<div id="createwireoutput"></div>
 		
-		<form action="wpmu-admin.php?page=demodata_form&amp;create=status" method="post" class="demodata" id="createstatusform">
+		<form action="' . $formpage . '.php?page=demodata_form&amp;create=status" method="post" class="demodata" id="createstatusform">
 		<fieldset>
 		
 			<h4>' . __("BuddyPress Member Statuses", "demodata") . '</h4>
@@ -2361,7 +2366,7 @@ function demodata_form()
 		
 		<div id="createstatusoutput"></div>
 		
-		<form action="wpmu-admin.php?page=demodata_form&amp;create=friends" method="post" class="demodata" id="createfriendsform">
+		<form action="' . $formpage . '.php?page=demodata_form&amp;create=friends" method="post" class="demodata" id="createfriendsform">
 		<fieldset>
 			
 			<h4>' . __("BuddyPress Friends", "demodata") . '</h4>
@@ -2387,7 +2392,7 @@ function demodata_form()
 		echo '		
 		<h3>Delete demo data</h3>
 		
-		<form action="wpmu-admin.php?page=demodata_form" method="post" class="demodata" id="deleteform">
+		<form action="' . $formpage . '.php?page=demodata_form" method="post" class="demodata" id="deleteform">
 		<fieldset>
 		
 		';
@@ -2655,7 +2660,7 @@ function demodata_wp_plugin_standard_header( $currency = "", $plugin_name = "", 
 			<input type="hidden" name="no_note" value="1" />
 			<input type="hidden" name="no_shipping" value="1" />
 			<input type="hidden" name="rm" value="1" />
-			<input type="hidden" name="currency_code" value="' . $currency . '">
+			<input type="hidden" name="currency_code" value="' . $currency . '" />
 			<input type="hidden" name="return" value="' . $pageURL . 'thankyou=true" />
 			<input type="hidden" name="bn" value="PP-DonationsBF:btn_donateCC_LG.gif:NonHosted" />
 			<p>';
@@ -2704,7 +2709,7 @@ function demodata_wp_plugin_standard_footer( $currency = "", $plugin_name = "", 
 			<input type="hidden" name="no_note" value="1" />
 			<input type="hidden" name="no_shipping" value="1" />
 			<input type="hidden" name="rm" value="1" />
-			<input type="hidden" name="currency_code" value="' . $currency . '">
+			<input type="hidden" name="currency_code" value="' . $currency . '" />
 			<input type="hidden" name="return" value="' . $pageURL . 'thankyou=true" />
 			<input type="hidden" name="bn" value="PP-DonationsBF:btn_donateCC_LG.gif:NonHosted" />
 			<input type="image" src="https://www.paypal.com/en_US/i/btn/btn_donate_SM.gif" border="0" name="submit" alt="' . __( "Donate" ) . ' ' . $plugin_name . '" />
