@@ -3,7 +3,7 @@
 Plugin Name: Demo Data Creator
 Plugin URI: http://www.stillbreathing.co.uk/wordpress/demo-data-creator/
 Description: Demo Data Creator is a Wordpress, WPMU and BuddyPress plugin that allows a Wordpress developer to create demo users, blogs, posts, comments and blogroll links for a Wordpress site. For BuddyPress you can also create user friendships, user statuses, user wire posts, groups, group members and group wire posts.
-Version: 0.9.7.2
+Version: 0.9.7.3
 Author: Chris Taylor
 Author URI: http://www.stillbreathing.co.uk
 */
@@ -13,7 +13,7 @@ $register = new Plugin_Register();
 $register->file = __FILE__;
 $register->slug = "demodata";
 $register->name = "Demo Data Creator";
-$register->version = "0.9.7.2";
+$register->version = "0.9.7.3";
 $register->developer = "Chris Taylor";
 $register->homepage = "http://www.stillbreathing.co.uk";
 $register->Plugin_Register();
@@ -36,6 +36,9 @@ if (!function_exists('is_site_admin') || !function_exists('is_super_admin')) {
 	global $current_site;
 	$current_site->domain = demodata_blog_domain();
 }
+
+// include registration functions
+require_once(ABSPATH . WPINC . '/registration.php');
 
 // ======================================================
 // Admin functions
@@ -360,11 +363,15 @@ function demodata_create_users()
 {
 	global $wpdb;
 	global $current_site;
-
+	$domain = $current_site->domain;
+	if ( $domain == "" ) {
+		$domain = $_SERVER["SERVER_NAME"];
+	}
+	
 	// get the users settings
 	$users = @$_POST["users"] == "" ? 100 : (int)$_POST["users"];
 	$users = $users > 1000 ? $users = 1000 : $users = $users;
-	$useremailtemplate = @$_POST["useremailtemplate"] == "" ? "demouser[x]@" . $current_site->domain : $_POST["useremailtemplate"];		
+	$useremailtemplate = @$_POST["useremailtemplate"] == "" ? "demouser[x]@" . $domain : $_POST["useremailtemplate"];		
 	
 	// check all the settings
 	if (
@@ -389,9 +396,9 @@ function demodata_create_users()
 			$registrationnotification = get_site_option("registrationnotification");
 			update_site_option("registrationnotification", "no");
 		}
-	
-		$success = true;
-		$userx = 0;
+
+		$userx = $wpdb->get_var("select count(ID) from ".$wpdb->users.";");
+		$created = 0;
 		
 		// loop the number of required users
 		for($u = 0; $u < $users; $u++)
@@ -404,31 +411,48 @@ function demodata_create_users()
 			$lastname = demodata_lastname();
 			$username = $firstname . $lastname;
 			$email = str_replace("[x]", $userx, $useremailtemplate);
-			$random_password = substr(md5(uniqid(microtime())), 0, 6);
+			$random_password = wp_generate_password( 12, false );
 			
-			// check the user can be created
-			$id = wp_create_user($username, $random_password, $email);
-			if ($id == 0)
-			{
-				$success = false;
-				$error .= "<li>Error creating user " . $userx . '</li>';
-				$userx--;
-				// break out of this loop
-				break;
+			if ( email_exists( $email ) ) {
+			
+				$error .= "<li>Email exists: " . $email . "</li>";
+			
 			} else {
-				$userdetails["ID"] = $id;
-				if ($buddypress)
+			
+				// check the user can be created
+				$id = wp_create_user($username, $random_password, $email);
+
+				if ($id == 0 || is_array($id))
 				{
-					$userdetails["user_nicename"] = strtolower($firstname . $lastname);
-					$userdetails["display_name"] = ucfirst($firstname) . " " . ucfirst($lastname);
-					// set XProfile full name
-					xprofile_set_field_data(1, $id, ucfirst($firstname) . " " . ucfirst($lastname));
+					$error .= "<li>Error creating user " . $userx;
+					if (is_array($id)) {
+						$error .= ": " . $id[0][0];
+					}
+					$error .= "</li>";
+					$userx--;
+					// break out of this loop
+					break;
 				} else {
-					$userdetails["user_nicename"] = ucfirst($firstname) . " " . ucfirst($lastname);
-					$userdetails["display_name"] = ucfirst($firstname);
+					$created++;
+					$userdetails["ID"] = $id;
+					if ($buddypress)
+					{
+						$userdetails["user_nicename"] = strtolower($firstname . $lastname);
+						$userdetails["display_name"] = ucfirst($firstname) . " " . ucfirst($lastname);
+						// set XProfile full name
+						xprofile_set_field_data(1, $id, ucfirst($firstname) . " " . ucfirst($lastname));
+					} else {
+						$userdetails["user_nicename"] = ucfirst($firstname) . " " . ucfirst($lastname);
+						$userdetails["display_name"] = ucfirst($firstname);
+					}
+					wp_update_user($userdetails);
 				}
-				wp_update_user($userdetails);
 			}
+		}
+		
+		$success = false;
+		if ($created == $users) {
+			$success = true;
 		}
 		
 		// turn registration notification back on for WPMU
@@ -441,7 +465,7 @@ function demodata_create_users()
 		
 			echo '
 			<div class="demodatasuccess">
-			<p>' . $userx . " " . __("demo users created", "demodata") . '</p>
+			<p>' . $created . " " . __("demo users created", "demodata") . '</p>
 			</div>
 			';
 			
@@ -449,7 +473,7 @@ function demodata_create_users()
 		
 			echo '
 			<div class="demodataerror">
-			<p>' . $userx . ' ' . __("demo users created", "demodata") . '</p>
+			<p>' . $created . ' ' . __("demo users created", "demodata") . '</p>
 			<p>' . __("Errors encountered:", "demodata") . '</p>
 			<ul>
 			' . $error . '
@@ -2132,6 +2156,11 @@ function demodata_form()
 		}
 	}
 	
+	$domain = $current_site->domain;
+	if ( $domain == "" ) {
+		$domain = $_SERVER["SERVER_NAME"];
+	}
+	
 	echo '
 	
 		<h2>' . __("Create demo data", "demodata") . '</h2>
@@ -2146,7 +2175,7 @@ function demodata_form()
 			<input type="text" name="users" id="users" value="100" /></p>
 			
 			<p><label for="useremailtemplate">' . __("User email template (with [x] for the user ID)", "demodata") . '</label>
-			<input type="text" name="useremailtemplate" id="useremailtemplate" value="demouser[x]@' . $current_site->domain . '" class="text" /></p>
+			<input type="text" name="useremailtemplate" id="useremailtemplate" value="demouser[x]@' . $domain . '" class="text" /></p>
 			
 			<p><label for="createusers">' . __("Create users", "demodata") . '</label>
 			<input type="hidden" name="create" value="users" />
