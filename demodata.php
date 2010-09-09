@@ -3,7 +3,7 @@
 Plugin Name: Demo Data Creator
 Plugin URI: http://www.stillbreathing.co.uk/wordpress/demo-data-creator/
 Description: Demo Data Creator is a Wordpress, WPMU and BuddyPress plugin that allows a Wordpress developer to create demo users, blogs, posts, comments and blogroll links for a Wordpress site. For BuddyPress you can also create user friendships, user statuses, user wire posts, groups, group members and group wire posts.
-Version: 0.9.7.3
+Version: 0.9.7.4
 Author: Chris Taylor
 Author URI: http://www.stillbreathing.co.uk
 */
@@ -13,7 +13,7 @@ $register = new Plugin_Register();
 $register->file = __FILE__;
 $register->slug = "demodata";
 $register->name = "Demo Data Creator";
-$register->version = "0.9.7.3";
+$register->version = "0.9.7.4";
 $register->developer = "Chris Taylor";
 $register->homepage = "http://www.stillbreathing.co.uk";
 $register->Plugin_Register();
@@ -27,11 +27,34 @@ if ( isset($_GET['ajax']) && $_GET['ajax'] == "true" )
 	
 }
 
+// check for MultiSite
+function demodata_is_multisite() {
+	if (
+		version_compare(get_bloginfo("version"), "3", ">=") 
+		&& defined('MULTISITE') 
+		&& MULTISITE
+	) {
+		return true;
+	}
+	return false;
+}
+
+// check for WPMU
+function demodata_is_mu() {
+	if (
+		defined('VHOST')
+		&& function_exists("is_site_admin") 
+	){
+		return true;
+	}
+	return false;
+}
+
 // when the admin menu is built
 add_action('admin_menu', 'demodata_add_menu_items');
 
-// if this is not WPMU
-if (!function_exists('is_site_admin') || !function_exists('is_super_admin')) {
+// if this is not WPMU/MultiSite
+if (!demodata_is_multisite() || !demodata_is_mu()) {
 	// set up the $current_site global
 	global $current_site;
 	$current_site->domain = demodata_blog_domain();
@@ -82,7 +105,7 @@ function demodata_create()
 		
 			// creating blogs
 			case "blogs":
-				if (function_exists('is_site_admin') || function_exists('is_super_admin')){
+				if (demodata_is_multisite() || demodata_is_mu()){
 					demodata_create_blogs();
 				}
 				break;
@@ -149,7 +172,7 @@ function demodata_add_menu_items()
 	// WP3
 	if (version_compare(get_bloginfo("version"), "3", ">=")) {
 		// multisite
-		if (defined('WP_ALLOW_MULTISITE') && WP_ALLOW_MULTISITE == true) {
+		if (demodata_is_multisite()) {
 			add_submenu_page('ms-admin.php', 'Demo Data Creator', 'Demo Data Creator', 'edit_users', 'demodata_form', 'demodata_form');
 		// standard
 		} else {
@@ -157,7 +180,7 @@ function demodata_add_menu_items()
 		}
 	} else {
 		// MU
-		if (function_exists('is_site_admin') && is_site_admin()) {
+		if (demodata_is_mu()) {
 			add_submenu_page('wpmu-admin.php', 'Demo Data Creator', 'Demo Data Creator', 'edit_users', 'demodata_form', 'demodata_form');
 		// standard
 		} else {
@@ -230,7 +253,7 @@ function demodata_js()
 					// WP3
 					if (version_compare(get_bloginfo("version"), "3", ">=")) {
 						// multisite
-						if (defined('WP_ALLOW_MULTISITE') && WP_ALLOW_MULTISITE == true) {
+						if (demodata_is_multisite()) {
 							echo 'url: "ms-admin.php?page=demodata_form&ajax=true",
 							';
 						// standard
@@ -240,7 +263,7 @@ function demodata_js()
 						}
 					} else {
 						// MU
-						if (function_exists('is_site_admin') && is_site_admin()) {
+						if (demodata_is_mu()) {
 							echo 'url: "wpmu-admin.php?page=demodata_form&ajax=true",
 							';
 						// standard
@@ -391,8 +414,8 @@ function demodata_create_users()
 		// detect BuddyPress
 		$buddypress = defined( 'BP_ROOT_BLOG' );
 	
-		// turn off new registration notifications for WPMU
-		if (function_exists('is_site_admin') || function_exists('is_super_admin')) {
+		// turn off new registration notifications for WPMU/MultiSite
+		if (demodata_is_multisite() || demodata_is_mu()) {
 			$registrationnotification = get_site_option("registrationnotification");
 			update_site_option("registrationnotification", "no");
 		}
@@ -455,8 +478,8 @@ function demodata_create_users()
 			$success = true;
 		}
 		
-		// turn registration notification back on for WPMU
-		if (function_exists('is_site_admin') || function_exists('is_super_admin')) {
+		// turn registration notification back on for WPMU/MultiSite
+		if (demodata_is_multisite() || demodata_is_mu()) {
 			update_site_option("registrationnotification", $registrationnotification);
 		}
 	
@@ -496,8 +519,8 @@ function demodata_create_users()
 // create demo blogs
 function demodata_create_blogs()
 {
-	// if this is WPMU
-	if (function_exists('is_site_admin') || function_exists('is_super_admin')) {
+	// if this is WPMU/MultiSite
+	if (demodata_is_multisite() || demodata_is_mu()) {
 
 		global $wpdb;
 		global $current_site;
@@ -653,7 +676,6 @@ function demodata_create_categories()
 	// get the categories and tags settings
 	$maxblogcategories = @$_POST["maxblogcategories"] == "" ? 10 : (int)$_POST["maxblogcategories"];
 	$maxblogcategories = $maxblogcategories > 25 ? $maxblogcategories = 25 : $maxblogcategories = $maxblogcategories;
-	$maxblogtags = $maxblogtags > 100 ? $maxblogtags = 100 : $maxblogtags = $maxblogtags;
 	
 	// check all the settings
 	if (
@@ -671,8 +693,8 @@ function demodata_create_categories()
 	
 		$categoryx = 0;
 		
-		// if this is WPMU
-		if (function_exists('is_site_admin') || function_exists('is_super_admin')) {
+		// if this is WPMU/MultiSite
+		if (demodata_is_multisite() || demodata_is_mu()) {
 		
 			// get blogs
 			$sql = "select blog_id, domain from " . $wpdb->blogs . ";";
@@ -705,8 +727,6 @@ function demodata_create_categories()
 				restore_current_blog();
 			}
 		} else {
-		
-			$blog->domain = $current_site->domain;
 			
 			// get a random number of blog categories
 			$categories = rand(0, $maxblogcategories);
@@ -718,7 +738,7 @@ function demodata_create_categories()
 				$categoryx++;
 
 				// see if the category can be inserted
-				if (!demodata_create_category($blog->domain, $categoryx))
+				if (!demodata_create_category($current_site->domain, $categoryx))
 				{
 					$categoryx--;
 				}				
@@ -773,8 +793,8 @@ function demodata_create_posts()
 	
 		$postx = 0;
 		
-		// if this is WPMU
-		if (function_exists('is_site_admin') || function_exists('is_super_admin')) {
+		// if this is WPMU/MultiSite
+		if (demodata_is_multisite() || demodata_is_mu()) {
 		
 			// get blogs
 			$sql = "select blog_id, domain from " . $wpdb->blogs . ";";
@@ -879,7 +899,7 @@ function demodata_create_pages()
 		$pagex = 0;
 		
 		// if this is WPMU
-		if (function_exists('is_site_admin') || function_exists('is_super_admin')) {
+		if (demodata_is_multisite() || demodata_is_mu()) {
 		
 			// get blogs
 			$sql = "select blog_id, domain from " . $wpdb->blogs . ";";
@@ -1060,8 +1080,8 @@ function demodata_create_comments()
 	
 		$commentx = 0;
 		
-		// if this is WPMU
-		if (function_exists('is_site_admin') || function_exists('is_super_admin')) {
+		// if this is WPMU/MultiSite
+		if (demodata_is_multisite() || demodata_is_mu()) {
 		
 			// get blogs
 			$sql = "select blog_id, domain from " . $wpdb->blogs . ";";
@@ -1176,8 +1196,8 @@ function demodata_create_links()
 	
 		$linkx = 0;
 		
-		// if this is WPMU
-		if (function_exists('is_site_admin') || function_exists('is_super_admin')) {
+		// if this is WPMU/MultiSite
+		if (demodata_is_multisite() || demodata_is_mu()) {
 		
 			// get blogs
 			$sql = "select blog_id, domain from " . $wpdb->blogs . ";";
@@ -1613,7 +1633,7 @@ function demodata_create_wire()
 // get the domain for this blog
 function demodata_blog_domain()
 {
-	$u = get_bloginfo("siteurl");
+	$u = get_bloginfo("wpurl");
 	$u = str_replace("http://", "", $u);
 	$u = str_replace("https://", "", $u);
 	$parts = explode("/", $u);
@@ -1666,6 +1686,8 @@ function demodata_create_category($blogdomain, $categoryx)
 // create a post
 function demodata_create_post($blogdomain, $maxpostlength, $postx)
 {
+	// get a random user for the current blog
+	$userid = demodata_random_blog_user_id();
 	// generate the random post data
 	$postcontent = demodata_generate_html(rand(1, $maxpostlength));
 	// generate array of category ids
@@ -1720,7 +1742,7 @@ function demodata_create_page($blogdomain, $parentid, $maxpagelength, $pagex)
 function demodata_create_blog($newid, $blogdomain, $blogpath, $blogname, $user_id)
 {
 	// if this is WPMU
-	if ((function_exists('is_site_admin') || function_exists('is_super_admin')) && $newid > 1)
+	if ((demodata_is_multisite() || demodata_is_mu()) && $newid > 1)
 	{
 		global $current_site;
 		global $current_user;
@@ -1896,6 +1918,15 @@ function demodata_random_user_id($id = 0)
 	return $wpdb->get_var("select id from " . $wpdb->users . " where " . $wpdb->escape($id) . " = 0 or id <> " . $wpdb->escape($id) . " order by rand() limit 1;");
 }
 
+// get a random user id for the current blog
+function demodata_random_blog_user_id($id = 0)
+{
+	$wp_user_search = new WP_User_Search(null, null, null);
+	$rs = $wp_user_search->get_results();
+	$x = array_rand($rs);
+	return $rs[$x];
+}
+
 // delete demo data
 function demodata_delete()
 {
@@ -1912,11 +1943,17 @@ function demodata_delete()
 	
 	// delete all pages except page ID 1
 	$sql = "delete from " . $wpdb->posts . " where id > 1;";
-	$users = $wpdb->query($sql);
+	$posts = $wpdb->query($sql);
+	if ($posts === false) {
+		echo '<li>Error with SQL: ' . $sql . '</li>';
+	}
 	
 	// delete user meta
 	$sql = "delete from " . $wpdb->usermeta . " where user_id > 1;";
 	$users = $wpdb->query($sql);
+	if ($users === false) {
+		echo '<li>Error with SQL: ' . $sql . '</li>';
+	}
 	
 	// count users
 	$sql = "select count(id) from " . $wpdb->users . " where id > 1;";
@@ -1924,8 +1961,8 @@ function demodata_delete()
 	
 	$i = 0;
 	
-	// if this is WPMU
-	if (function_exists('is_site_admin') || function_exists('is_super_admin')) {
+	// if this is WPMU/MultiSite
+	if (demodata_is_multisite() || demodata_is_mu()) {
 	
 		// count blogs
 		$sql = "select count(blog_id) from " . $wpdb->blogs . " where blog_id > 1;";
@@ -1947,33 +1984,58 @@ function demodata_delete()
 	// delete blog 1 comments
 	$sql = "delete from " . $wpdb->comments . ";";
 	$comments = $wpdb->query($sql);
+	if ($comments === false) {
+		echo '<li>Error with SQL: ' . $sql . '</li>';
+	}
 	
 	// delete blog 1 links
 	$sql = "delete from " . $wpdb->links . ";";
 	$links = $wpdb->query($sql);
+	if ($links === false) {
+		echo '<li>Error with SQL: ' . $sql . '</li>';
+	}
 	
 	// delete blog 1 terms
 	$sql = "delete from " . $wpdb->terms . " where term_id > 2;";
 	$terms = $wpdb->query($sql);
+	if ($terms === false) {
+		echo '<li>Error with SQL: ' . $sql . '</li>';
+	}
 	
 	// delete blog 1 term taxonomy
 	$sql = "delete from " . $wpdb->term_taxonomy . " where term_id > 2;";
 	$term_taxonomy = $wpdb->query($sql);
+	if ($term_taxonomy === false) {
+		echo '<li>Error with SQL: ' . $sql . '</li>';
+	}
 	
 	// delete blog 1 term relationships
 	$sql = "delete from " . $wpdb->term_relationships . " where term_taxonomy_id > 2;";
 	$term_relationships = $wpdb->query($sql);
+	if ($term_relationships === false) {
+		echo '<li>Error with SQL: ' . $sql . '</li>';
+	}
 	
-	// delete registration log
-	$sql = "delete from " . $wpdb->registration_log . ";";
-	$registration_log = $wpdb->query($sql);
+	// delete registration log (if the table exists)
+	if ($wpdb->registration_log != "") {
+		$sql = "delete from " . $wpdb->registration_log . ";";
+		$registration_log = $wpdb->query($sql);
+		if ($registration_log === false) {
+			echo '<li>Error with SQL: ' . $sql . '</li>';
+		}
+	}
 	
-	// delete site categories
-	$sql = "delete from " . $wpdb->sitecategories . " where cat_ID > 2;";
-	$sitecategories = $wpdb->query($sql);
+	// delete site categories (if the table exists)
+	if ($wpdb->sitecategories != "") {
+		$sql = "delete from " . $wpdb->sitecategories . " where cat_ID > 2;";
+		$sitecategories = $wpdb->query($sql);
+		if ($sitecategories === false) {
+			echo '<li>Error with SQL: ' . $sql . '</li>';
+		}
+	}
 	
-	// if this is WPMU
-	if (function_exists('is_site_admin') || function_exists('is_super_admin')) {
+	// if this is WPMU/MultiSite
+	if (demodata_is_multisite() || demodata_is_mu()) {
 	
 		// alter auto integer
 		$sql = "ALTER TABLE " . $wpdb->blogs . " AUTO_INCREMENT = 2;";
@@ -1999,78 +2061,140 @@ function demodata_delete()
 		// delete activity
 		$sql = "delete from " . $wpdb->base_prefix. "bp_activity;";
 		$activity = $wpdb->query($sql);
+		if ($activity === false) {
+			echo '<li>Error with SQL: ' . $sql . '</li>';
+		}
 		
 		// delete activity meta
 		$sql = "delete from " . $wpdb->base_prefix. "bp_activity_meta;";
 		$activity_meta = $wpdb->query($sql);
+		if ($activity_meta === false) {
+			echo '<li>Error with SQL: ' . $sql . '</li>';
+		}
+	
+		// these next few tables don't exist any more
+		/*
 	
 		// delete user activity
 		$sql = "delete from " . $wpdb->base_prefix. "bp_activity_user_activity;";
 		$user_activity = $wpdb->query($sql);
+		if ($user_activity === false) {
+			echo '<li>Error with SQL: ' . $sql . '</li>';
+		}
 		
 		// delete user activity cached
 		$sql = "delete from " . $wpdb->base_prefix. "bp_activity_user_activity_cached;";
 		$user_activity_cached = $wpdb->query($sql);
+		if ($user_activity_cached === false) {
+			echo '<li>Error with SQL: ' . $sql . '</li>';
+		}
 		
 		// delete site activity
 		$sql = "delete from " . $wpdb->base_prefix. "bp_activity_sitewide;";
 		$sitewide_activity = $wpdb->query($sql);
-	
-		// delete user xprofile data
-		$sql = "delete from " . $wpdb->base_prefix. "bp_xprofile_data where user_id > 1;";
-		$xprofile_data = $wpdb->query($sql);
-	
-		// delete group meta
-		$sql = "delete from " . $wpdb->base_prefix. "bp_groups_groupmeta;";
-		$groups_groupmeta = $wpdb->query($sql);
-		
-		// delete group membership
-		$sql = "delete from " . $wpdb->base_prefix. "bp_groups_members;";
-		$groups_members = $wpdb->query($sql);
-	
-		// delete group wire
-		$sql = "delete from " . $wpdb->base_prefix. "bp_groups_wire;";
-		$groups_wire = $wpdb->query($sql);
+		if ($sitewide_activity === false) {
+			echo '<li>Error with SQL: ' . $sql . '</li>';
+		}
 		
 		// delete user wire
 		$sql = "delete from " . $wpdb->base_prefix . "bp_xprofile_wire;";
 		$user_wire = $wpdb->query($sql);
+		if ($user_wire === false) {
+			echo '<li>Error with SQL: ' . $sql . '</li>';
+		}
 	
-		// delete groups
-		$sql = "delete from " . $wpdb->base_prefix. "bp_groups;";
-		$groups = $wpdb->query($sql);
-		
-		// delete friendships
-		$sql = "delete from " . $wpdb->base_prefix. "bp_friends;";
-		$friends = $wpdb->query($sql);
+		// delete group wire
+		$sql = "delete from " . $wpdb->base_prefix. "bp_groups_wire;";
+		$groups_wire = $wpdb->query($sql);
+		if ($groups_wire === false) {
+			echo '<li>Error with SQL: ' . $sql . '</li>';
+		}
 		
 		// delete user blog posts
 		$sql = "delete from " . $wpdb->base_prefix. "bp_user_blogs_posts;";
 		$user_blogs_posts = $wpdb->query($sql);
+		if ($user_blogs_posts === false) {
+			echo '<li>Error with SQL: ' . $sql . '</li>';
+		}
 		
 		// delete user blog meta
 		$sql = "delete from " . $wpdb->base_prefix. "bp_user_blogs_blogmeta;";
 		$user_blogs_blogmeta = $wpdb->query($sql);
+		if ($user_blogs_blogmeta === false) {
+			echo '<li>Error with SQL: ' . $sql . '</li>';
+		}
 		
 		// delete user blog comments
 		$sql = "delete from " . $wpdb->base_prefix. "bp_user_blogs_comments;";
 		$user_blogs_comments = $wpdb->query($sql);
+		if ($user_blogs_comments === false) {
+			echo '<li>Error with SQL: ' . $sql . '</li>';
+		}
+		
+		*/
+	
+		// delete user xprofile data
+		$sql = "delete from " . $wpdb->base_prefix. "bp_xprofile_data where user_id > 1;";
+		$xprofile_data = $wpdb->query($sql);
+		if ($xprofile_data === false) {
+			echo '<li>Error with SQL: ' . $sql . '</li>';
+		}
+	
+		// delete group meta
+		$sql = "delete from " . $wpdb->base_prefix. "bp_groups_groupmeta;";
+		$groups_groupmeta = $wpdb->query($sql);
+		if ($groups_groupmeta === false) {
+			echo '<li>Error with SQL: ' . $sql . '</li>';
+		}
+		
+		// delete group membership
+		$sql = "delete from " . $wpdb->base_prefix. "bp_groups_members;";
+		$groups_members = $wpdb->query($sql);
+		if ($groups_members === false) {
+			echo '<li>Error with SQL: ' . $sql . '</li>';
+		}
+	
+		// delete groups
+		$sql = "delete from " . $wpdb->base_prefix. "bp_groups;";
+		$groups = $wpdb->query($sql);
+		if ($groups === false) {
+			echo '<li>Error with SQL: ' . $sql . '</li>';
+		}
+		
+		// delete friendships
+		$sql = "delete from " . $wpdb->base_prefix. "bp_friends;";
+		$friends = $wpdb->query($sql);
+		if ($friends === false) {
+			echo '<li>Error with SQL: ' . $sql . '</li>';
+		}
 		
 		// delete notifications
 		$sql = "delete from " . $wpdb->base_prefix. "bp_notifications;";
 		$notifications = $wpdb->query($sql);
+		if ($notifications === false) {
+			echo '<li>Error with SQL: ' . $sql . '</li>';
+		}
 		
 		// delete messages recipients
 		$sql = "delete from " . $wpdb->base_prefix. "bp_messages_recipients;";
 		$messages_recipients = $wpdb->query($sql);
+		if ($messages_recipients === false) {
+			echo '<li>Error with SQL: ' . $sql . '</li>';
+		}
 		
 		// delete messages notices
 		$sql = "delete from " . $wpdb->base_prefix. "bp_messages_notices;";
 		$messages_notices = $wpdb->query($sql);
+		if ($messages_notices === false) {
+			echo '<li>Error with SQL: ' . $sql . '</li>';
+		}
 		
 		// delete messages
 		$sql = "delete from " . $wpdb->base_prefix. "bp_messages_messages;";
 		$messages_messages = $wpdb->query($sql);
+		if ($messages_messages === false) {
+			echo '<li>Error with SQL: ' . $sql . '</li>';
+		}
 		
 		echo '<li>' . __("BuddyPress data deleted", "demodata") . '</li>
 		';
@@ -2079,10 +2203,16 @@ function demodata_delete()
 	// delete users
 	$sql = "delete from " . $wpdb->users . " where id > 1;";
 	$users = $wpdb->query($sql);
+	if ($users === false) {
+		echo '<li>Error with SQL: ' . $sql . '</li>';
+	}
 	
 	// alter auto integer
 	$sql = "ALTER TABLE " . $wpdb->users . " AUTO_INCREMENT = 2;";
 	$users = $wpdb->query($sql);
+	if ($users === false) {
+		echo '<li>Error with SQL: ' . $sql . '</li>';
+	}
 
 	echo '<li>' . $usercount . ' ' . ("users deleted") . '</li>
 	';
@@ -2144,16 +2274,10 @@ function demodata_form()
 	
 	$formpage = "tools";
 	// WP3
-	if (version_compare(get_bloginfo("version"), "3", ">=")) {
-		// multisite
-		if (defined('WP_ALLOW_MULTISITE') && WP_ALLOW_MULTISITE == true && is_super_admin()) {
-			$formpage = "ms-admin";
-		}
-	} else {
-		// MU
-		if (function_exists('is_site_admin') && is_site_admin()) {
-			$formpage = "wpmu-admin";
-		}
+	if (demodata_is_multisite()) {
+		$formpage = "ms-admin";
+	} else if (demodata_is_mu()) {
+		$formpage = "wpmu-admin";
 	}
 	
 	$domain = $current_site->domain;
@@ -2188,8 +2312,13 @@ function demodata_form()
 		<div id="createusersoutput"></div>
 		';
 		
+		$perblog = "";
+		
 		// if this is WPMU/MultiSite
-		if ((version_compare(get_bloginfo("version"), "3", ">=") && defined('WP_ALLOW_MULTISITE') && WP_ALLOW_MULTISITE == true && is_super_admin()) || (function_exists("is_site_admin") && is_site_admin())) {
+		if (demodata_is_multisite() || demodata_is_mu()) {
+		
+		$perblog = __(". This is per blog.", "demodata");
+		
 		echo '
 		<form action="' . $formpage . '.php?page=demodata_form&amp;create=users" method="post" class="demodata" id="createblogsform">
 		<fieldset>
@@ -2220,19 +2349,20 @@ function demodata_form()
 			
 		</fieldset>
 		</form>
+		
+		<div id="createblogsoutput"></div>
 		';
 		
 		}
 		
 		echo '
-		<div id="createblogsoutput"></div>
 		
 		<form action="' . $formpage . '.php?page=demodata_form&amp;create=categories" method="post" class="demodata" id="createcategoriesform">
 		<fieldset>
 		
 			<h4>' . __("Categories", "demodata") . '</h4>
 			
-			<p><label for="maxblogcategories">' . __("Maximum number of categories per blog (max 25)", "demodata") . '</label>
+			<p><label for="maxblogcategories">' . __("Maximum number of categories (max 25)", "demodata") . $perblog . '</label>
 			<input type="text" name="maxblogcategories" id="maxblogcategories" value="10" /></p>
 			
 			<p><label for="createcategories">' . __("Create categories", "demodata") . '</label>
@@ -2250,7 +2380,7 @@ function demodata_form()
 		
 			<h4>' . __("Posts", "demodata") . '</h4>
 			
-			<p><label for="maxblogposts">' . __("Maximum number of posts per blog (max 100)", "demodata") . '</label>
+			<p><label for="maxblogposts">' . __("Maximum number of posts (max 100)", "demodata") . $perblog . '</label>
 			<input type="text" name="maxblogposts" id="maxblogposts" value="50" /></p>
 			
 			<p><label for="maxpostlength">' . __("Maximum number of blog post paragraphs (min 1, max 50)", "demodata") . '</label>
@@ -2271,10 +2401,10 @@ function demodata_form()
 		
 			<h4>' . __("Pages", "demodata") . '</h4>
 			
-			<p><label for="maxpages">' . __("Maximum number of pages per blog (max 50)", "demodata") . '</label>
+			<p><label for="maxpages">' . __("Maximum number of pages (max 50)", "demodata") . $perblog . '</label>
 			<input type="text" name="maxpages" id="maxpages" value="25" /></p>
 			
-			<p><label for="maxtoppages">' . __("Maximum number of top-level pages per blog (max 10)", "demodata") . '</label>
+			<p><label for="maxtoppages">' . __("Maximum number of top-level pages (max 10)", "demodata") . $perblog . '</label>
 			<input type="text" name="maxtoppages" id="maxtoppages" value="5" /></p>
 			
 			<p><label for="maxpageslevels">' . __("Maximum number of level to nest pages (max 5)", "demodata") . '</label>
@@ -2311,7 +2441,7 @@ function demodata_form()
 		
 		<div id="createcommentsoutput"></div>
 			
-		<form action="' . $formpage . '.php?page=demodata_form&amp;create=blogs" method="post" class="demodata" id="createlinksform">
+		<form action="' . $formpage . '.php?page=demodata_form&amp;create=links" method="post" class="demodata" id="createlinksform">
 		<fieldset>
 		
 			<h4>' . __("Links", "demodata") . '</h4>
@@ -2586,7 +2716,7 @@ commodo consequat.</dd>
 <p>Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vestibulum tortor quam, feugiat vitae, ultricies eget, tempor sit amet, ante. Donec eu libero sit amet quam egestas semper. Aenean ultricies mi vitae est. Mauris placerat eleifend leo.</p>';
 
 	$htmlstr = explode("<!--break-->", $htmlstr);
-	$blocks = count($htmlstr);
+	$blocks = count($htmlstr)-1;
 	
 	if ($maxblocks > count($htmlstr)) { $maxblocks = $blocks+1; }
 
