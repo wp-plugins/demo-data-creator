@@ -33,17 +33,18 @@ if ( !class_exists( "Plugin_Register" ) ) {
 		var $register_message = "";
 		var $thanks_message = "";
 		function Plugin_Register() {
+			@session_start();
 			register_activation_hook( $this->file, array( $this, "Activated" ) );
 			add_action( "admin_notices", array( $this, "Registration" ) );
 		}
 		function Activated() {
 			if ( $this->slug != "" && $this->name != "" && $this->version != "" ) {
-				header( "Location: plugins.php?activate=true&plugin_status=all&" . $this->slug . "=activated&paged=" . @$_GET["paged"] );
-				exit();
+				$_SESSION["activated_plugin"] = $this->slug;
 			}
 		}
 		function Registration() {
-			if ( isset( $_GET[$this->slug] ) && $_GET[$this->slug] == "activated" ) {
+			if ( isset( $_SESSION["activated_plugin"] ) && $_SESSION["activated_plugin"] == $this->slug ) {
+			$_SESSION["activated_plugin"] = "";
 			echo '
 			<div id="message" class="updated fade">
 				<p style="line-height:1.4em">
