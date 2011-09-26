@@ -3,8 +3,8 @@ Contributors: mrwiblog
 Donate link: http://www.stillbreathing.co.uk/donate/
 Tags: wordpress, wpmu, buddypress, demo, data, example, dummy, users, blogs, sample
 Requires at least: 2.7
-Tested up to: 3.0.1
-Stable tag: 0.9.7.7
+Tested up to: 3.2
+Stable tag: 0.9.8
 
 Demo Data Creator is a Wordpress, WPMU/MultiSite and BuddyPress plugin that allows a Wordpress developer to create demo users, blogs, posts, comments and blogroll links for a Wordpress site. For BuddyPress you can also create user friendships, user statuses, user wire posts, groups, group members and group wire posts.
 
@@ -64,6 +64,10 @@ The DemoData plugin now supports BuddyPress.
 1. The demo data admin page
 
 == Changelog ==
+
+= 0.9.8 (2011/09/26) =
+
+Fixed bug that stopped author pages working for automatically created users. Thanks to Zolt&aacute;n J&aacute;nos J&aacute;nosi for the fix.
 
 = 0.9.7.7 (2011/03/05) =
 
