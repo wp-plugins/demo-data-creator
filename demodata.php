@@ -2,8 +2,8 @@
 /*
 Plugin Name: Demo Data Creator
 Plugin URI: http://www.stillbreathing.co.uk/wordpress/demo-data-creator/
-Description: Demo Data Creator is a Wordpress, WPMU and BuddyPress plugin that allows a Wordpress developer to create demo users, blogs, posts, comments and blogroll links for a Wordpress site. For BuddyPress you can also create user friendships, user statuses, user wire posts, groups, group members and group wire posts.
-Version: 0.9.8
+Description: Demo Data Creator is a Wordpress, WPMU and BuddyPress plugin that allows a Wordpress developer to create demo users, blogs, posts, comments and blogroll links for a Wordpress site. For BuddyPress you can also create user friendships, user statuses, user wire posts, groups, group members and group wire posts. PLEASE NOTE: deleting the data created by this plugin will delete EVERYTHING (pages, posts, comments, users - everything) on your site, so DO NOT use on a production site, or one where you want to save the data.
+Version: 1.0
 Author: Chris Taylor
 Author URI: http://www.stillbreathing.co.uk
 */
@@ -13,7 +13,7 @@ $register = new Plugin_Register();
 $register->file = __FILE__;
 $register->slug = "demodata";
 $register->name = "Demo Data Creator";
-$register->version = "0.9.8";
+$register->version = "1.0";
 $register->developer = "Chris Taylor";
 $register->homepage = "http://www.stillbreathing.co.uk";
 $register->Plugin_Register();
@@ -60,8 +60,8 @@ if (!demodata_is_multisite() || !demodata_is_mu()) {
 	$current_site->domain = demodata_blog_domain();
 }
 
-// include registration functions
-require_once(ABSPATH . WPINC . '/registration.php');
+// include registration functions - DEPRECATED
+//require_once(ABSPATH . WPINC . '/registration.php');
 
 // ======================================================
 // Admin functions
@@ -2073,68 +2073,7 @@ function demodata_delete()
 		if ($activity_meta === false) {
 			echo '<li>Error with SQL: ' . $sql . '</li>';
 		}
-	
-		// these next few tables don't exist any more
-		/*
-	
-		// delete user activity
-		$sql = "delete from " . $wpdb->base_prefix. "bp_activity_user_activity;";
-		$user_activity = $wpdb->query($sql);
-		if ($user_activity === false) {
-			echo '<li>Error with SQL: ' . $sql . '</li>';
-		}
-		
-		// delete user activity cached
-		$sql = "delete from " . $wpdb->base_prefix. "bp_activity_user_activity_cached;";
-		$user_activity_cached = $wpdb->query($sql);
-		if ($user_activity_cached === false) {
-			echo '<li>Error with SQL: ' . $sql . '</li>';
-		}
-		
-		// delete site activity
-		$sql = "delete from " . $wpdb->base_prefix. "bp_activity_sitewide;";
-		$sitewide_activity = $wpdb->query($sql);
-		if ($sitewide_activity === false) {
-			echo '<li>Error with SQL: ' . $sql . '</li>';
-		}
-		
-		// delete user wire
-		$sql = "delete from " . $wpdb->base_prefix . "bp_xprofile_wire;";
-		$user_wire = $wpdb->query($sql);
-		if ($user_wire === false) {
-			echo '<li>Error with SQL: ' . $sql . '</li>';
-		}
-	
-		// delete group wire
-		$sql = "delete from " . $wpdb->base_prefix. "bp_groups_wire;";
-		$groups_wire = $wpdb->query($sql);
-		if ($groups_wire === false) {
-			echo '<li>Error with SQL: ' . $sql . '</li>';
-		}
-		
-		// delete user blog posts
-		$sql = "delete from " . $wpdb->base_prefix. "bp_user_blogs_posts;";
-		$user_blogs_posts = $wpdb->query($sql);
-		if ($user_blogs_posts === false) {
-			echo '<li>Error with SQL: ' . $sql . '</li>';
-		}
-		
-		// delete user blog meta
-		$sql = "delete from " . $wpdb->base_prefix. "bp_user_blogs_blogmeta;";
-		$user_blogs_blogmeta = $wpdb->query($sql);
-		if ($user_blogs_blogmeta === false) {
-			echo '<li>Error with SQL: ' . $sql . '</li>';
-		}
-		
-		// delete user blog comments
-		$sql = "delete from " . $wpdb->base_prefix. "bp_user_blogs_comments;";
-		$user_blogs_comments = $wpdb->query($sql);
-		if ($user_blogs_comments === false) {
-			echo '<li>Error with SQL: ' . $sql . '</li>';
-		}
-		
-		*/
-	
+
 		// delete user xprofile data
 		$sql = "delete from " . $wpdb->base_prefix. "bp_xprofile_data where user_id > 1;";
 		$xprofile_data = $wpdb->query($sql);
@@ -2561,15 +2500,16 @@ function demodata_form()
 		{
 			echo '
 			<p>Delete all user and blog data in your database except for information and tables for blog ID 1 and user ID 1. This will also delete all Buddypress groups and friend relationships.</p>
-			<p><strong>WARNING: This will delete ALL data except for data for user ID 1 and blog ID 1, making your site as it was when you first installed WordPress and BuddyPress. This will also delete all Buddypress groups and friend relationships.</strong></p>
+			<p><strong>WARNING: This will delete ALL data, making your site as it was when you first installed WordPress and BuddyPress. This will also delete all Buddypress groups and friend relationships.</strong></p>
 			';
 		} else {
 			echo '
-			<p>Delete all user and blog data in your database except for information and tables for blog ID 1 and user ID 1.</p>
-			<p><strong>WARNING: This will delete ALL data except for data for user ID 1 and blog ID 1, making your site as it was when you first installed WordPress</strong></p>
+			<p>Delete all user and blog data in your database.</p>
+			<p><strong>WARNING: This will delete ALL data.</strong></p>
 			';
 		}
 		echo '
+			<p style="border:4px solid #c00;padding:2em;font-weight:bold;color:#c00">THIS WILL DELETE ALL YOUR DATA. ARE YOU SURE YOU WANT TO PROCEED?</p>
 			<p><label for="delete">Delete demo data</label>
 			<input type="hidden" name="action" value="delete" />
 			<button type="submit" class="button demodatabutton" name="delete" id="delete">Delete</button></p>
@@ -2644,6 +2584,15 @@ function demodata_generate_html($maxblocks = 4)
 </ol>
 <!--break-->
 <blockquote><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus magna. Cras in mi at felis aliquet congue. Ut a est eget ligula molestie gravida. Curabitur massa. Donec eleifend, libero at sagittis mollis, tellus est malesuada tellus, at luctus turpis elit sit amet quam. Vivamus pretium ornare est.</p></blockquote>
+<!--break-->
+<img src="http://lorempixum.com/300/200" alt="Random image courtesy of LoremPixum.com" />
+<!--break-->
+<img src="http://lorempixum.com/100/100" alt="Random image courtesy of LoremPixum.com" />
+<img src="http://lorempixum.com/100/100" alt="Random image courtesy of LoremPixum.com" />
+<img src="http://lorempixum.com/100/100" alt="Random image courtesy of LoremPixum.com" />
+<img src="http://lorempixum.com/100/100" alt="Random image courtesy of LoremPixum.com" />
+<img src="http://lorempixum.com/100/100" alt="Random image courtesy of LoremPixum.com" />
+<img src="http://lorempixum.com/100/100" alt="Random image courtesy of LoremPixum.com" />
 <!--break-->
 <h3>Header Level 3</h3>
 
