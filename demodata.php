@@ -3,7 +3,7 @@
 Plugin Name: Demo Data Creator
 Plugin URI: http://www.stillbreathing.co.uk/wordpress/demo-data-creator/
 Description: Demo Data Creator is a Wordpress, WPMU and BuddyPress plugin that allows a Wordpress developer to create demo users, blogs, posts, comments and blogroll links for a Wordpress site. For BuddyPress you can also create user friendships, user statuses, user wire posts, groups, group members and group wire posts. PLEASE NOTE: deleting the data created by this plugin will delete EVERYTHING (pages, posts, comments, users - everything) on your site, so DO NOT use on a production site, or one where you want to save the data.
-Version: 1.0
+Version: 1.1
 Author: Chris Taylor
 Author URI: http://www.stillbreathing.co.uk
 */
@@ -13,7 +13,7 @@ $register = new Plugin_Register();
 $register->file = __FILE__;
 $register->slug = "demodata";
 $register->name = "Demo Data Creator";
-$register->version = "1.0";
+$register->version = "1.1";
 $register->developer = "Chris Taylor";
 $register->homepage = "http://www.stillbreathing.co.uk";
 $register->Plugin_Register();
@@ -1692,9 +1692,12 @@ function demodata_create_post($blogdomain, $maxpostlength, $postx)
 	$userid = demodata_random_blog_user_id();
 	// generate the random post data
 	$postcontent = demodata_generate_html(rand(1, $maxpostlength));
+	// generate random date (thanks to derscheinwelt for this: http://wordpress.org/support/topic/plugin-demo-data-creator-random-creation-date)
+	$randdate = date('Y-m-d H:i:s', strtotime( mt_rand(-1095,10).' days' . mt_rand(0,1440). 'minutes' ));
 	// generate array of category ids
 	$cats = demodata_random_categories($blogdomain);
 	$post = array('post_status' => 'live',
+	'post_date' => $randdate,
 	'post_type' => 'post',
 	'post_author' => $userid,
 	'ping_status' => 'open',
