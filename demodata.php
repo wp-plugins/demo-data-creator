@@ -3,7 +3,7 @@
 Plugin Name: Demo Data Creator
 Plugin URI: http://www.stillbreathing.co.uk/wordpress/demo-data-creator/
 Description: Demo Data Creator is a Wordpress, WPMU and BuddyPress plugin that allows a Wordpress developer to create demo users, blogs, posts, comments and blogroll links for a Wordpress site. For BuddyPress you can also create user friendships, user statuses, user wire posts, groups, group members and group wire posts. PLEASE NOTE: deleting the data created by this plugin will delete EVERYTHING (pages, posts, comments, users - everything) on your site, so DO NOT use on a production site, or one where you want to save the data.
-Version: 1.3
+Version: 1.3.1
 Author: Chris Taylor
 Author URI: http://www.stillbreathing.co.uk
 */
@@ -13,7 +13,7 @@ $register = new Plugin_Register();
 $register->file = __FILE__;
 $register->slug = "demodata";
 $register->name = "Demo Data Creator";
-$register->version = "1.3";
+$register->version = "1.3.1";
 $register->developer = "Chris Taylor";
 $register->homepage = "http://www.stillbreathing.co.uk";
 $register->Plugin_Register();
@@ -57,7 +57,9 @@ add_action('admin_menu', 'demodata_add_menu_items');
 if (!demodata_is_multisite() || !demodata_is_mu()) {
 	// set up the $current_site global
 	global $current_site;
-	$current_site->domain = demodata_blog_domain();
+        if( $current_site != null ) {
+		$current_site->domain = demodata_blog_domain();
+        }
 }
 
 // include registration functions - DEPRECATED
