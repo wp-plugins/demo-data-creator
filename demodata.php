@@ -3,7 +3,7 @@
 Plugin Name: Demo Data Creator
 Plugin URI: http://www.stillbreathing.co.uk/wordpress/demo-data-creator/
 Description: Demo Data Creator is a Wordpress, WPMU and BuddyPress plugin that allows a Wordpress developer to create demo users, blogs, posts, comments and blogroll links for a Wordpress site. For BuddyPress you can also create user friendships, user statuses, user wire posts, groups, group members and group wire posts. PLEASE NOTE: deleting the data created by this plugin will delete EVERYTHING (pages, posts, comments, users - everything) on your site, so DO NOT use on a production site, or one where you want to save the data.
-Version: 1.3.1
+Version: 1.3.2
 Author: Chris Taylor
 Author URI: http://www.stillbreathing.co.uk
 */
@@ -13,7 +13,7 @@ $register = new Plugin_Register();
 $register->file = __FILE__;
 $register->slug = "demodata";
 $register->name = "Demo Data Creator";
-$register->version = "1.3.1";
+$register->version = "1.3.2";
 $register->developer = "Chris Taylor";
 $register->homepage = "http://www.stillbreathing.co.uk";
 $register->Plugin_Register();
@@ -57,9 +57,9 @@ add_action('admin_menu', 'demodata_add_menu_items');
 if (!demodata_is_multisite() || !demodata_is_mu()) {
 	// set up the $current_site global
 	global $current_site;
-        if( $current_site != null ) {
+	if( $current_site != null ) {
 		$current_site->domain = demodata_blog_domain();
-        }
+	}
 }
 
 // include registration functions - DEPRECATED
@@ -388,11 +388,17 @@ function demodata_create_users()
 {
 	global $wpdb;
 	global $current_site;
-	$domain = $current_site->domain;
-	if ( $domain == "" ) {
-		$domain = $_SERVER["SERVER_NAME"];
+	$domain = '';
+	if( is_object( $current_site ) ) {
+		$domain = $current_site->domain;
 	}
-	// if the domain does not have a suffix (for example "localhost" but a .com at the end to pas WordPress email checking
+	else {
+		$domain = demodata_blog_domain();
+	}
+	if ( $domain == '' ) {
+		$domain = $_SERVER['SERVER_NAME'];
+	}
+	// if the domain does not have a suffix (for example "localhost" put a .com at the end to pass WordPress email checking
 	if (strpos($domain, ".") === false) $domain .= ".com";
 	
 	// get the users settings
@@ -747,6 +753,17 @@ function demodata_create_categories()
 			// get a random number of blog categories
 			$categories = rand(0, $maxblogcategories);
 			
+			$domain = '';
+			if( is_object( $current_site ) ) {
+				$domain = $current_site->domain;
+			}
+			else {
+				$domain = demodata_blog_domain();
+			}
+			if ( $domain == '' ) {
+				$domain = $_SERVER['SERVER_NAME'];
+			}
+			
 			// loop the number of required categories
 			for($c = 0; $c < $categories; $c++)
 			{
@@ -754,7 +771,7 @@ function demodata_create_categories()
 				$categoryx++;
 
 				// see if the category can be inserted
-				if (!demodata_create_category($current_site->domain, $categoryx))
+				if (!demodata_create_category($domain, $categoryx))
 				{
 					$categoryx--;
 				}				
@@ -853,8 +870,18 @@ function demodata_create_posts()
 			
 				$postx++;
 
+				$domain = '';
+				if( is_object( $current_site ) ) {
+					$domain = $current_site->domain;
+				}
+				else {
+					$domain = demodata_blog_domain();
+				}
+				if ( $domain == '' ) {
+					$domain = $_SERVER['SERVER_NAME'];
+				}
 				// see if the post can be inserted
-				if (!demodata_create_post($current_site->domain, $maxpostlength, $postx))
+				if (!demodata_create_post($domain, $maxpostlength, $postx))
 				{
 					$postx--;
 				}				
@@ -995,12 +1022,24 @@ function demodata_create_pages()
 			// get a random number of top pages
 			$toppages = rand(1, $maxtoppages);
 			
+			$domain = '';
+			if( is_object( $current_site ) ) {
+				$domain = $current_site->domain;
+			}
+			else {
+				$domain = demodata_blog_domain();
+			}
+			if ( $domain == '' ) {
+				$domain = $_SERVER['SERVER_NAME'];
+			}
+
+
 			// loop the number of top pages
 			for($p = 0; $p < $toppages; $p++)
 			{
 				$pagex++;
-				
-				$id = demodata_create_page($current_site->domain, 0, $maxpagelength, $pagex);
+
+				$id = demodata_create_page($domain, 0, $maxpagelength, $pagex);
 				
 				if (!$id)
 				{
@@ -1022,7 +1061,7 @@ function demodata_create_pages()
 				{
 					$pagex++;
 				
-					$id = demodata_create_page($current_site->domain, $pageid, $maxpagelength, $pagex);
+					$id = demodata_create_page($domain, $pageid, $maxpagelength, $pagex);
 					
 					if (!$id)
 					{
@@ -1033,7 +1072,7 @@ function demodata_create_pages()
 					}
 				}
 			}
-			
+
 			// if the levels is greater than 2
 			if ($levels > 2 && $pageids[1] && count($pageids[1]) > 0)
 			{
@@ -1041,8 +1080,8 @@ function demodata_create_pages()
 				foreach($pageids[1] as $pageid)
 				{
 					$pagex++;
-				
-					$id = demodata_create_page($current_site->domain, $pageid, $maxpagelength, $pagex);
+
+					$id = demodata_create_page($domain, $pageid, $maxpagelength, $pagex);
 					
 					if (!$id)
 					{
@@ -1157,8 +1196,19 @@ function demodata_create_comments()
 				{
 					$commentx++;
 					
+					$domain = '';
+					if( is_object( $current_site ) ) {
+						$domain = $current_site->domain;
+					}
+					else {
+						$domain = demodata_blog_domain();
+					}
+					if ( $domain == '' ) {
+						$domain = $_SERVER['SERVER_NAME'];
+					}
+					
 					// see if the comment can be inserted
-					if (!demodata_create_comment($current_site->domain, $post->id, $commentx))
+					if (!demodata_create_comment($domain, $post->id, $commentx))
 					{
 						// continue
 						$commentx--;
@@ -1249,11 +1299,22 @@ function demodata_create_links()
 			// get a random number of bookmarks
 			$links = rand(0, $maxbloglinks);
 			
+			$domain = '';
+			if( is_object( $current_site ) ) {
+				$domain = $current_site->domain;
+			}
+			else {
+				$domain = demodata_blog_domain();
+			}
+			if ( $domain == '' ) {
+				$domain = $_SERVER['SERVER_NAME'];
+			}
+			
 			// loop the number of required bookmarks
 			for($l = 0; $l < $links; $l++)
 			{
 				$linkx++;
-				if (!demodata_create_link($current_site->domain, $linkx))
+				if (!demodata_create_link($domain, $linkx))
 				{
 					// continue
 					$linkx--;
@@ -2238,12 +2299,18 @@ function demodata_form()
 	} else if (demodata_is_mu()) {
 		$formpage = "wpmu-admin";
 	}
-	
-	$domain = $current_site->domain;
-	if ( $domain == "" ) {
-		$domain = $_SERVER["SERVER_NAME"];
+
+	$domain = '';
+	if( is_object( $current_site ) ) {
+		$domain = $current_site->domain;
 	}
-	
+	else {
+		$domain = demodata_blog_domain();
+	}
+	if ( $domain == '' ) {
+		$domain = $_SERVER['SERVER_NAME'];
+	}
+
 	echo '
 	
 		<h2>' . __("Create demo data", "demodata") . '</h2>
@@ -2251,7 +2318,7 @@ function demodata_form()
 
 		<form action="' . $formpage . '.php?page=demodata_form&amp;create=users" method="post" class="demodata" id="createusersform">
 		<fieldset>
-		
+
 			<h4>' . __("Users", "demodata") . '</h4>
 			
 			<p><label for="users">' . __("Number of users (max 1000)", "demodata") . '</label>
